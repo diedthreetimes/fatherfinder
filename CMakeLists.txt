@@ -14,5 +14,5 @@ include_directories (Sequences)
 add_subdirectory (Sequences)
 
 
-add_executable(Rflp rflp.cxx)
-target_link_libraries (Rflp Sequences bamtools)
+add_executable(rflp rflp.cxx)
+target_link_libraries (rflp Sequences bamtools)
