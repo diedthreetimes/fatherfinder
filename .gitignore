@@ -1,0 +1,8 @@
+build/
+data/
+CMakeFiles/
+CMakeCache.txt
+Makefile
+bin/
+cmake_install.cmake
+*.a
