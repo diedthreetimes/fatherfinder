@@ -1,2 +1,24 @@
-First Check In
-Testing Repo
+-------------------------------------------------------------------------------
+-INSTALATION-
+
+In order to compile you need the following installed on the system.
+
+bamtools - https://github.com/pezmaster31/bamtools
+openssl - 
+GMP
+
+We use the platfrom independent make system cmake http://www.cmake.org/
+
+To install on Ubuntu simply run,
+$ sudo apt-get install cmake
+
+Cmake will try and find the location of the required libraries to configure
+  the location yourself use the ccmake gui.
+$ sudo apt-get install cmake-curses-gui
+$ ccmake .
+
+Once configured you can (re)generate Makefile's via
+$ cmake .
+
+And then compile as usual
+$ make
