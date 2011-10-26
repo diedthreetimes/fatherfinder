@@ -3,9 +3,13 @@
 #include <string>
 #include <vector>
 #include <iostream>
+#include <Sequence.h>
+#include <Marker.h>
+#include <Enzyme.h>
+#include <BamSequence>
+#include <StringSequence>
 
 using namespace std;
-using namespace BamTools;
 
 void ussage(char* argv[]){
   cout << argv[0] << "" << endl;
@@ -20,16 +24,15 @@ int main(int argc, const char* argv[] )
   // Read in the bam file as a sequence
   // This means doing some form of pileup
 
-  // Restructure Bam reading as a Sequence object
-
-  // Read in Enzymes (more than 1) and markers
   // Conduct RFLP store as another useful file format (presumably text)
-  // First break into fragments based on enzyme
-  // Probe l fragments based on Markers (ask about this)
-  
+  // Test Enzyme and Marker computing using c code (also may be useful to print fragments)
+  // Restructure reading enzyme and markers from files
+  // Allow reading in of multiple bam files
+
   // Add an RFLP reader
 
   // Renamespace
+  // [optional] think about restructuring to allow markers to contain info about there matched fragments
 
   // Start crypto phase
   // Build a new set with fragments concated with enzyme identifier
@@ -46,7 +49,7 @@ int main(int argc, const char* argv[] )
 
   Sequence * seq;
   vector<Sequence *> enzymes;
-  //vector<Sequence *> markers;
+  vector<Sequence *> markers;
   
   // Load the files
   try{
@@ -55,6 +58,7 @@ int main(int argc, const char* argv[] )
     
     // Here the cut, position is the start of the second half
     enzymes.push( new Enzyme("CTGCAG", "pstI", 5) );
+    markers.push( new Marker("GCTGCCCACTTCTTCCAGAGGGCCTGGCCATGGGTGAGGGCCCTGGGTAGAAGACCCC");
   }
   // TODO: More restrictive error handling
   catch( ... ){
@@ -63,49 +67,83 @@ int main(int argc, const char* argv[] )
   }
   
   
-  // Have each enzyme digest the genome
-
+  // Have each enzyme digest the genome while checking for markers
   char read;
-  int num_enzymes = enzymes.length();
-  vector<Sequence *> [] fragments = new vector<Sequence *> [num_enzymes];
-  int [] idxs  = new int[num_enzymes];
-  int [] skips = new int[num_enzymes];
-  for( int i = 0; i < num_enzymes; i++ ){
-    fragments[i].push(new StringSequence());
-    idxs[i] = 0;
+  int num_enzymes = enzymes.length(); // we assume the enzyme and marker list don't change
+  int num_markers = markers.length();
+  Sequence* [] fragments    = new Sequence*[num_enzymes];      // 2d arrays of pointers
+  Sequence* [] marked_frags = new Sequence*[num_enzymes];      // 2d arrays of pointers
+  int       [] skips        = new      int[num_enzymes];       // Handles skiping matches
+  bool    * [] marks        = new     bool[num_enzymes];       // Keeps track of when a marker has been identified.
+
+  // Init arrays
+  for( int i=0; i < num_enzymes; i++){
+    
+    fragments[i]    = new Sequence*[num_markers];
+    marked_frags[i] = new Sequence*[num_markers];
+    marks[i]        = new     bool[num_markers];
+    
+    for( int j=0; j < num_markers; j++){
+      fragments   [i][j]    = new StringSequence();
+      marked_frags[i][j]    = NULL;
+      marks     [i][j]    = false;
+    }
     skips[i] = 0;
   }
 
-  while( seq.hasNext() ){
-    read = seq.next();
+  // Loop through the genome
+  while( read = seq.next() ){
     
+    // Let the enzymes digest
     for( int i = 0; i < num_enzymes; i++ ){
       // This enzyme has found a match skip some reads
+      // NOTE: This means that markers will not match over enzyme boundries
+      //    We may want to verify that enzymes won't cut marker to see if this is an issue
       if(skips[i] != 0){
 	skips[i]--;
 	next;
       }
-
-      // The current fragment for this enzyme
-      idx = idxs[i];
       
       // Check to see if the enzyme can cut at this pos in the sequence
-      if ( seq.match(enzymes[i]) ){
-	fragments[i][idx] += enzymes[i].first();
-	  
+      if ( seq->isMatch(enzymes[i]) ){
+	*fragments[i] += enzymes[i]->first();
+
+	marked = false;
+	for(int m=0;m<num_markers;m++)
+	  marked = marked || marks[i][m];
+
+	// No marker is using this fragment
+	if(!marked){
+	  delete fragments[i];
+	}
+
 	// Init a new fragment beginning with the matched piece
-	idxs[i]++;
-	fragments[i].push(	
-			  new StringSequence(enzymes[i].last()) 
-				);
+	fragments[i] = new StringSequence(enzymes[i]->last());
 	
-	skips[i] = enzymes[i].length()-1;
+	// Don't check the matching slots again (this would be biologically inacurate)
+	skips[i] = enzymes[i]->length()-1;
       }
       else {
 	// Collect this read onto the current fragment
-	fragments[i][idx] += read;
+	*fragments[i] += read;
       }
-    }//end for
+    }//end for enzyme
+
+    // Check if we have found our marker
+    for(int i=0; i < num_markers; i++){
+      // NOTE: Skips are not as usefull here since a second match is unlikely by design
+      //       and in 99% of cases would return the same fragment (but may give perf boost)
+      
+      if( seq->isMatch(markers[i]) ){
+	for(int e=0; e < num_enzymes;e++){
+	  marks[e][i] = true;
+	  
+	  // Save this fragment since it is a match
+	  marked_frags[e][i] = fragments[i];
+	}
+      }
+      
+    }// end for marker
   }//end while
   
   // Process Fragments
