@@ -6,7 +6,7 @@
 // ---------------------------------------------------------------------------
 // Provides a standard (abstract) api for sequencial genomic access                                       
 // *************************************************************************** 
-#ifdef  _SEQUENCE_H
+#ifndef  _SEQUENCE_H
 #define _SEQUENCE_H
 class Sequence {
   
@@ -25,14 +25,28 @@ public:
   // Move to the next base pair in the sequence return null if none
   virtual char next(void)=0;
   // Move back n steps in the sequence. (Or -1 to return to the beggining)
-  virtual void rewind(int n) =0;  
+  virtual char rewind(int n) =0;  
+  // Move to the begining of the sequence;
+  virtual char begin(){ return rewind(-1); }
   //TODO: hasNext()
+  //TODO: skip()
+  //TODO: length()
+  //TODO: FIX sequences to start at pos -1 thus begin works better
+  
+  // ------------------------------
+  // Mutate Sequences
+  // ------------------------------
+  // Add various data types to the end of this sequence
+  virtual Sequence& concat(const Sequence & other)= 0;
+  virtual Sequence& operator += (Sequence & other){ return this->concat(other); }
+  virtual Sequence& concat(const char & other)= 0;
+  virtual Sequence& operator += (const char& other){ return this->concat(other); }
 
   // ------------------------------
   // Compare sequences
   // ------------------------------
 
-  // Does other match self as rooted at the current BP?
+  // Does other match self as rooted at the current BP? //TODO: reword
   //
   // The following is considered a match 
   // other:
@@ -40,10 +54,11 @@ public:
   //
   // self:    
   // ATTACGACTAGGTA
-  //          ^ <-current  
-  virtual bool isMatch(Sequence* other)=0;
+  //          ^ <-current
+  // Note: this has the affect of resetting other //TODO: fix this
+  virtual bool isMatch(Sequence& other)=0;
 
   //TODO: Implement current/hasNext using next and a private next_item +more
-}
+};
 
 #endif //_SEQUENCE_H

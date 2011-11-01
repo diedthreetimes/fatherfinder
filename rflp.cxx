@@ -92,8 +92,8 @@ int main(int argc, const char* argv[] )
   }
 
   // Loop through the genome
-  while( read = seq.next() ){
-    
+  read = read.begin();
+  do {   
     // Let the enzymes digest
     for( int i = 0; i < num_enzymes; i++ ){
       // This enzyme has found a match skip some reads
@@ -144,7 +144,7 @@ int main(int argc, const char* argv[] )
       }
       
     }// end for marker
-  }//end while
+  }while( read = seq.next() );
   
   // Process Fragments
 
