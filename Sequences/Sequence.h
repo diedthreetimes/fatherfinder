@@ -8,6 +8,7 @@
 // *************************************************************************** 
 #ifndef  _SEQUENCE_H
 #define _SEQUENCE_H
+#include <ostream>
 class Sequence {
   
 // constructor / destructor
@@ -57,6 +58,12 @@ public:
   //          ^ <-current
   // Note: this has the affect of resetting other //TODO: fix this
   virtual bool isMatch(Sequence& other)=0;
+
+  // ------------------------------
+  // Debug
+  // ------------------------------
+  virtual void PrintSelf(std::ostream &s){};
+  // TODO: Overide caster to use PrintSelf in 'cout <<'
 
   //TODO: Implement current/hasNext using next and a private next_item +more
 };

@@ -46,7 +46,7 @@ module ::Guard
     end
 
     def run_on_change(paths)
-      paths += @failed_paths if @options[:keep_failed]
+      paths += @failed_paths.uniq if @options[:keep_failed]
       passed = _run(paths)
 
       if passed
@@ -104,11 +104,19 @@ module ::Guard
 end
 
 guard 'gtest', :test_paths => ['bin/test'] do
-  watch(%r{(((?!\/).)+)\.[h|cxx]$})     { |m| "bin/test/#{m[1].underscore}_test" }
+  watch(%r{(((?!\/).)+)\.(h|c|hxx|cxx|cpp)$}) { |m|
+    name = m[1].underscore
+
+    if name =~ /_test$/
+      "bin/test/#{name}"
+    else
+      "bin/test/#{name}_test"
+    end
+  }
 
   # Enable this if not using automake
-  # watch(%r{(.+)_test$}) {|m| "#{m[1]}_test" }
+  watch(%r{(.+)_test$}) {|m| "#{m[1]}_test" }
 
-  # Enable this if using automake
-  watch(%r{(((?!\/).)+_test)\.cxx$}) {|m| "bin/test/#{m[1]}"}
+  # Enable this if using automake The top one covers this case
+  #watch(%r{(((?!\/).)+_test)\.cxx$}) {|m| "bin/test/#{m[1]}"}
 end

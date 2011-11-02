@@ -44,6 +44,7 @@ Sequence& StringSequence::concat(const char& c)
   m_seq += c;
 }
 
+//TODO: Move this into a generic sequence
 bool StringSequence::isMatch(Sequence& other)
 {
   char o_cur = other.begin();
@@ -57,18 +58,19 @@ bool StringSequence::isMatch(Sequence& other)
   bool match = true;
   // Walk along both strings, breaking when we have no match
   do {
-    moved++;
-    cur = this->next();
     if( o_cur != cur ){
       match = false;
       break;
     }
+
+    moved++;
+    cur = this->next();
   } while( o_cur = other.next() );
   // If we've made it without any of them not matching match will be true
 
   // Rewind both strings
   this->rewind(moved);
-  other.begin(); 
+  other.begin();
   
   return match;
 }

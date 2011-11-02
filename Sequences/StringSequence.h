@@ -9,15 +9,16 @@
 #ifndef _STRING_SEQUENCE_H
 #define _STRING_SEQUENCE_H
 #include <string>
+#include <ostream>
 #include "Sequence.h"
-class StringSequence : Sequence {
+class StringSequence : public Sequence {
   
  public:
   // Constructor / Destructor
   StringSequence(std::string s): m_seq(s), m_idx(0) {}
   virtual ~StringSequence() {}
 
-  //TODO: Copy Constructor
+  //pTODO: Copy Constructor
   
   // Implement the virtual functions
   virtual char current();
@@ -27,6 +28,11 @@ class StringSequence : Sequence {
   virtual Sequence& concat(const Sequence& other);
   virtual Sequence& concat(const char& c);
   virtual bool isMatch(Sequence& other);
+  
+  virtual void PrintSelf(std::ostream& s){
+    s << "String: " << m_seq << std::endl;;
+    s << "Current: " << m_idx << std::endl;
+  }
 
  // Data members
  private:
