@@ -28,5 +28,24 @@ TEST(StringSequenceTest, next){
   EXPECT_EQ('d', s.next());
   EXPECT_EQ('\0', s.next());
   EXPECT_EQ('\0', s.next());
-  EXPECT_EQ(false, !!s.next());
+  //EXPECT_EQ(false, !!s.next()); //Passes but annoying warning
+}
+
+//TODO: Finish testing this class and method
+TEST(StringSequenceTest, IsMatch){
+  StringSequence s1("ATTACGACTAGGTA");
+  StringSequence s2("AGGTA");
+  
+  
+  EXPECT_FALSE( s1.isMatch(s2) );
+
+  while(!s1.isMatch(s2))
+    s1.next();
+
+  EXPECT_TRUE( s1.isMatch(s2) );
+
+  do{
+    EXPECT_EQ(s2.current(), s1.current());
+  }while(s2.next());
+	      
 }
