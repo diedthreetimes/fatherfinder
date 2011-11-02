@@ -46,7 +46,7 @@ module ::Guard
     end
 
     def run_on_change(paths)
-      paths += @failed_paths.uniq if @options[:keep_failed]
+      paths = (paths + @failed_paths).uniq if @options[:keep_failed]
       passed = _run(paths)
 
       if passed
@@ -66,6 +66,7 @@ module ::Guard
 
     private
     def _run(paths)
+      paths = paths.uniq
       if @options[:auto_make]
         unless system('make')
           ::Guard::Notifier.notify(
@@ -79,20 +80,24 @@ module ::Guard
 
       # TODO: Remove this
       ::Guard::UI.info("Running: #{paths.join(' ')}", :reset => true)
-      if !system(paths.map{|x| './' + x}.join(' ')) #TODO: Notify on failure
+      status = paths.map do |p|
+        [system('./'+p), p]
+      end
+      failed_tests = status.select{|x| !x[0]}.map{|x| x[1]}
+      if !failed_tests.empty?
         ::Guard::Notifier.notify(
-                                 "Test #{paths.join(' ')} failed!", #TODO: Add why it failed
+                                 "Test #{failed_tests.join(' ')} failed!", #TODO: Add why it failed
                                  :title => "Test Failed",
                                  :image =>  :failed
                                  )
-      else @last_failed #TODO: Move this somewhere else
+      else #TODO: Move this somewhere else
         ::Guard::Notifier.notify(
                                  "Suceeded!", #TODO: Add why/what worked
                                  :title => "Test Passed",
                                  :image =>  :success
                                  )
-
       end
+
 
       true
     end
@@ -115,7 +120,7 @@ guard 'gtest', :test_paths => ['bin/test'] do
   }
 
   # Enable this if not using automake
-  watch(%r{(.+)_test$}) {|m| "#{m[1]}_test" }
+  # watch(%r{(.+)_test$}) {|m| "#{m[1]}_test" }
 
   # Enable this if using automake The top one covers this case
   #watch(%r{(((?!\/).)+_test)\.cxx$}) {|m| "bin/test/#{m[1]}"}
