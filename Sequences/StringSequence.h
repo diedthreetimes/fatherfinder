@@ -27,7 +27,6 @@ class StringSequence : public Sequence {
 
   virtual Sequence& concat(const Sequence& other);
   virtual Sequence& concat(const char& c);
-  virtual bool isMatch(Sequence& other);
   
   virtual void PrintSelf(std::ostream& s){
     s << "String: " << m_seq << std::endl;;

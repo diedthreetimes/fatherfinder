@@ -57,7 +57,7 @@ public:
   // ATTACGACTAGGTA
   //          ^ <-current
   // Note: this has the affect of resetting other //TODO: fix this
-  virtual bool isMatch(Sequence& other)=0;
+  virtual bool isMatch(Sequence& other);
 
   // ------------------------------
   // Debug

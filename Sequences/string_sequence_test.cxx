@@ -14,7 +14,7 @@ TEST(StringSequenceTest, ArgumentsConstructor) {
 TEST(StringSequenceTest, next){
   // Make sure we can't walk off the string
   StringSequence e("");
-  
+
   bool res = true;
   if(e.next()){
     res = false;
