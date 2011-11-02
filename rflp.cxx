@@ -1,5 +1,4 @@
 //Emulate RFLP to generate fragment lengths=
-#include <api/BamReader.h>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -7,6 +6,7 @@
 #include <Marker.h>
 #include <Enzyme.h>
 #include <BamSequence>
+// #include <api/BamReader.h>
 #include <StringSequence>
 
 using namespace std;

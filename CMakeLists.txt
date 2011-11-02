@@ -10,5 +10,5 @@ set (LIBRARY_OUTPUT_PATH    "${CMAKE_SOURCE_DIR}/lib")
 include_directories (Sequences)
 add_subdirectory (Sequences)
 
-add_executable(rflp rflp.cxx)
-target_link_libraries (rflp Sequences) #Is this needed if the other library depends on it? bamtools)
+# add_executable(rflp rflp.cxx)
+# target_link_libraries (rflp Sequences) #Is this needed if the other library depends on it? bamtools)
