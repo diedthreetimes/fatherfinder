@@ -35,4 +35,5 @@ find_package(BamTools REQUIRED)
 include_directories (${BAMTOOLS_INCLUDE_DIRS})
 link_directories (${BAMTOOLS_LIBRARIES})
 
-add_gtest(Sequences/string_sequence_test sequence Sequences bamtools)
+add_gtest(Sequences/string_sequence_test sequence Sequences)
+add_gtest(Sequences/bam_sequence_test sequence Sequences bamtools)

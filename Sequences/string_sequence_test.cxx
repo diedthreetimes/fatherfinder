@@ -52,7 +52,6 @@ TEST(StringSequenceTest, IsMatch){
 	      
 }
 
-//TODO: Test edge case where we are concating and idx is at \0
 TEST(SringSequenceTest, concat){
   StringSequence s1("");
   StringSequence s2("ABA");
