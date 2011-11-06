@@ -2,36 +2,60 @@
 #include "BamSequence.h"
 #include "StringSequence.h"
 
-// Tests factorial of positive numbers.
-TEST(BamSequenceTest, ArgumentsConstructor) {
-  
+#define DATA test/data/
+
+
+TEST(BamSequenceTest, SingleFileConstructor){
+  BamSequence s("test_seq.bam");
+
+  s.PrintSelf(std::cout);
+
+  EXPECT_NE('\0', s.current());
 }
 
-TEST(BamSequenceTest, SingleFile){
-
+TEST(BamSequenceTest, DISABLED_MultipleFileConstructor){
+  std::vector<std::string> files;
+  files.push_back("test_seq.bam");
+  BamSequence s(files);
 }
 
-TEST(BamSequenceTest, MultipleFile){
+// The easiest way to test this is just compare it to bamtools output
+TEST(BamSequenceTest, DISABLED_pileup){
+  std::vector<std::string> files;
+  files.push_back("test_seq.bam");
+  BamSequence s(files);
 
-}
-
-// This is private test it later
-//TEST(BamSequenceTest, pileup){
-//
-//}
-
-TEST(BamSequenceTest, next){
-  // Make sure we can't walk off the string
-  BamSequence e("empty.bam");
-
-  bool res = true;
-  if(e.next()){
-    res = false;
+  std::string result;
+  result += s.current();
+  for(int i = 0; i < 60; i++){
+    result += s.next();
   }
+  
+  // TODO: Fill this up with the actual data
+  std::string expected = "";
+  expected += "12345678901234567890";
+  expected += "12345678901234567890";
+  expected += "12345678901234567890";
 
-  EXPECT_EQ(true, res);
+  EXPECT_EQ(expected, result);
+}
 
-  StringSequence s("abcd.bam");
+TEST(BamSequenceTest, DISABLED_rewind){
+
+}
+
+TEST(BamSequenceTest, DISABLED_next){
+  // Make sure we can't walk off the string
+  // BamSequence e("empty.bam");
+
+  // bool res = true;
+  // if(e.next()){
+  //   res = false;
+  // }
+
+  // EXPECT_EQ(true, res);
+
+  BamSequence s("DATAabcd.bam");
   EXPECT_EQ('b', s.next());
   EXPECT_EQ('c', s.next());
   EXPECT_EQ('d', s.next());
@@ -41,14 +65,13 @@ TEST(BamSequenceTest, next){
 }
 
 
-TEST(BamSequenceTest, IsMatch){
-  BamSequence s1("test_seq.bam");//"ATTACGACTAGGTA"); // TODO: Load from file
+TEST(BamSequenceTest, DISABLED_IsMatch){
+  BamSequence s1("DATAtest_seq.bam");//"ATTACGACTAGGTA");
   StringSequence s2("AGGTA");
   
   EXPECT_FALSE( s1.isMatch(s2) );
   
-  while(!s1.isMatch(s2))
-    s1.next();
+  while(!s1.isMatch(s2) && s1.next());
 
   EXPECT_TRUE( s1.isMatch(s2) );
 
@@ -61,14 +84,9 @@ TEST(BamSequenceTest, IsMatch){
 	      
 }
 
-
 // This isn't implemented for bams
 TEST(BamSequenceTest, concat){
-  BamSequence s("empty.bam");
-  caught = false
-  try{
-    s += 'c';
-  }catch( BamSequence::NotImplementedException e& ){
-    caught = true;
-  }
+  BamSequence s("DATAtest_seq.bam");
+  
+  EXPECT_THROW(s += 'c', BamSequence::NotImplementedException);
 }

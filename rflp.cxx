@@ -6,7 +6,6 @@
 #include <Marker.h>
 #include <Enzyme.h>
 #include <BamSequence>
-// #include <api/BamReader.h>
 #include <StringSequence>
 
 using namespace std;
@@ -145,27 +144,7 @@ int main(int argc, const char* argv[] )
       
     }// end for marker
   }while( read = seq.next() );
-  
+
   // Process Fragments
-
-  if ( !reader.Open(inputFilename) ) {
-    cerr << "Could not open input BAM files." << endl;
-    return -1;
-  }
-
-  BamAlignment al;
-  int i, j = 0;
-
-  while ( reader.GetNextAlignment(al) ) {
-
-    if( j < 10 )
-      cout << al.Position << ":" << al.AlignedBases << ":" << al.AlignedBases.length() << endl;
-
-    j += 1;
-    i += al.AlignedBases.length();
-  }
-
-  cout << "Made: " << i << " reads." << endl;
-  reader.Close();
 }
 

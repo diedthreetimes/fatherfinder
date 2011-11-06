@@ -109,8 +109,12 @@ module ::Guard
 end
 
 guard 'gtest', :test_paths => ['bin/test'] do
-  watch(%r{(((?!\/).)+)\.(h|c|hxx|cxx|cpp)$}) { |m|
-    name = m[1].underscore
+  # Uncomment this line if you have a flat compile system
+  #watch(%r{(((?!\/).)+)\.(h|c|hxx|cxx|cpp)$}) { |m|
+  watch(%r{(.+)\.(h|c|hxx|cxx|cpp)$}) { |m|
+    name = m[1].split('/')
+    name[-1] = name[-1].underscore
+    name = name.join('/')
 
     if name =~ /_test$/
       "bin/test/#{name}"

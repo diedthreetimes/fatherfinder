@@ -12,6 +12,8 @@
 #include <string>
 #include <exception>
 #include "Sequence.h"
+#include <api/BamMultiReader.h>
+#include <api/BamAlignment.h>
 
 class BamSequence : public Sequence {
  // Exceptions
@@ -26,8 +28,8 @@ class BamSequence : public Sequence {
   
  public:
   // Constructor / Destructor
-  BamSequence(std::string file);
-  BamSequence(std::string files []);
+  BamSequence(const std::string & file);
+  BamSequence(const std::vector<std::string> & files);
   virtual ~BamSequence();
 
   // TODO: Copy Constructor
@@ -41,11 +43,15 @@ class BamSequence : public Sequence {
   virtual Sequence& concat(const char& c) {throw notImplemented; };
   
   virtual void PrintSelf(std::ostream& s){
+    s << m_alignment.AlignedBases << std::endl;
+    s << m_alignment.AlignedBases.length() << std::endl;
+    s << m_alignment.Length << std::endl;
   }
 
  // Data members
  private:
- 
-  
+  BamTools::BamMultiReader m_reader;
+  BamTools::BamAlignment m_alignment;
+  int m_idx;
 };
 #endif //_BAM_SEQUENCE_H

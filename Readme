@@ -22,3 +22,14 @@ $ cmake .
 
 And then compile as usual
 $ make
+
+
+There are a few optional tools that really ease development:
+  guard - https://github.com/guard/guard
+  googletest - http://code.google.com/p/googletest/
+
+  #TODO: add install instructions
+  #TODO: add libnotify info
+
+  If tests are undersired you can disable all tests.
+    Simply change the 'build_all_tests' setting to OFF in CMakeLists.txt.
