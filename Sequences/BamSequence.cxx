@@ -90,6 +90,15 @@ char BamSequence::rewind(int n)
   throw notImplemented;
 }
 
+char BamSequence::begin()
+{
+  m_reader.Rewind();
+  
+  init();
+
+  return current();
+}
+
 // Fill the circular buffer the next n bps (including current)
 void BamSequence::retrieve(int n)
 {
@@ -111,8 +120,13 @@ char BamSequence::calc_position(int i)
   // While we don't have every alignment containing i add alignments
   while( !read_all && (m_alignments.size() == 0 ||  m_alignments.back().Position <= i) ){
     m_alignments.push_back( BamTools::BamAlignment() );
-    if( !m_reader.GetNextAlignment(m_alignments.back()) )
+    
+    //if(cur_pos % 100000 == 0)
+    //  std::cout << "push" << cur_pos << std::endl;
+    if( m_reader.GetNextAlignment(m_alignments.back()) == false ){
       read_all = true;
+      std::cout << "Setting read_all" << std::endl;
+    }
   }
   
   if( m_alignments.size() == 0  && read_all)
@@ -134,7 +148,7 @@ char BamSequence::calc_position(int i)
   // NOTE: This will always pick the 'smaller' character for ties since indicies are stored in order
   // A more robust solution is to add randomnes or other data metrics like read quality
   int max = 0;
-  char max_c = 'D';
+  char max_c = 'N';
   std::map<char,int>::iterator it = hash.begin();
   for(; it != hash.end(); it++){
     if( (*it).second > max ){
@@ -146,6 +160,7 @@ char BamSequence::calc_position(int i)
   return max_c;
 }
 
+// Do we match the other sequence? It is important to note that a 'N' is considered a non match
 bool BamSequence::isMatch(Sequence & other)
 {
   char o_cur = other.begin();

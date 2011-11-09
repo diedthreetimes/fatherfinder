@@ -49,7 +49,8 @@ class BamSequence : public Sequence {
   // Overide some of the defaults
   virtual bool isMatch(Sequence &);
   virtual void PrintSelf(std::ostream& s){  }
-  
+  virtual char begin();
+
   int Position(void){ return cur_pos; }
 
  // Data members

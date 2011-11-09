@@ -8,6 +8,8 @@
 #include <BamSequence.h>
 #include <StringSequence.h>
 
+#define DEBUG true
+
 using namespace std;
 
 void ussage(char* argv[]){
@@ -37,10 +39,10 @@ int main(int argc, const char* argv[] )
   string bamFilename = argv[1];
 
   // CSV of enzymes one per line (name,string,cut position)
-  string enzymeFilename = argv[2];
+  string enzymeFilename = ""; //argv[2];
 
   // CSV of markers one per line
-  string markersFilename = argv[3];
+  string markersFilename = ""; //argv[3];
 
 
   Sequence * seq;
@@ -50,11 +52,14 @@ int main(int argc, const char* argv[] )
   // Load the files
   try{
     // TODO: Incorporate file reader based on filetype
-    Sequence *seq = new BamSequence(bamFilename);
+    seq = new BamSequence(bamFilename);
     
     // Here the cut, position is the start of the second half
     enzymes.push_back( new Enzyme("CTGCAG", "pstI", 5) );
+
+    std::cout << "Cutting with enzyme :";
     enzymes.back()->PrintSelf(std::cout);
+
     markers.push_back( new StringSequence("GCTGCCCACTTCTTCCAGAGGGCCTGGCCATGGGTGAGGGCCCTGGGTAGAAGACCCC") );
   }
   // TODO: More restrictive error handling
@@ -62,7 +67,6 @@ int main(int argc, const char* argv[] )
     cerr << "Error reading " << bamFilename << endl;
     exit(1);
   }
-  
   
   // Have each enzyme digest the genome while checking for markers
   char read;
@@ -86,10 +90,16 @@ int main(int argc, const char* argv[] )
     }
     skips[i] = 0;
   }
-
+  
   // Loop through the genome
   read = seq->begin();
+  
+  int p = 0;
   do {   
+    p += 1;
+    if((p % 100000 == 0) && DEBUG)
+      std::cout << "Looked at " << p << "base pairs"<< read << std::endl;
+
     // Let the enzymes digest
     for( int i = 0; i < num_enzymes; i++ ){
       // This enzyme has found a match skip some reads
@@ -104,6 +114,8 @@ int main(int argc, const char* argv[] )
       if ( seq->isMatch(*enzymes[i]) ){
 	*(fragments[i]) += enzymes[i]->first();
 
+	std::cout << "Cut found!" << std::endl;
+	fragments[i]->PrintSelf(std::cout);
 	bool marked = false;
 	for(int m=0;m<num_markers;m++)
 	  marked = marked || marks[i][m];
@@ -131,6 +143,8 @@ int main(int argc, const char* argv[] )
       //       and in 99% of cases would return the same fragment (but may give perf boost)
       
       if( seq->isMatch(*markers[i]) ){
+	if(DEBUG)
+	  std::cout << "Found a match" << std::endl;
 	for(int e=0; e < num_enzymes;e++){
 	  marks[e][i] = true;
 	  
@@ -143,5 +157,11 @@ int main(int argc, const char* argv[] )
   }while( read = seq->next() );
 
   // Process Fragments
+
+  for(int e=0; e < num_enzymes; e++){
+    for(int m=0; m < num_markers; m++){
+      marked_frags[e][m]->PrintSelf(std::cout);
+    }
+  }
 }
 
