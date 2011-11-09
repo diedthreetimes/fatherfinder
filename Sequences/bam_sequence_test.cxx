@@ -2,40 +2,65 @@
 #include "BamSequence.h"
 #include "StringSequence.h"
 
-#define DATA test/data/
-
+std::string DATA = "bin/test/data/";
 
 TEST(BamSequenceTest, SingleFileConstructor){
-  BamSequence s("test_seq.bam");
+  BamSequence s(DATA + "test_seq.bam");
 
-  s.PrintSelf(std::cout);
+  EXPECT_NE('\0', s.current());
+
+  for(int i=0; i < 100; i++){    
+    EXPECT_NE('\0', s.current()) << "Read " << i + 1 << " has found null";
+  }
+
+  EXPECT_NE('\0', s.current());
+
+}
+
+TEST(BamSequenceTest, MultipleFileConstructor){
+  std::vector<std::string> files;
+  files.push_back(DATA + "test_seq.bam");
+  files.push_back(DATA + "test_seq2.bam");
+  BamSequence s(files);
+
+
+  // todo: test jumping around more thorougly 
 
   EXPECT_NE('\0', s.current());
 }
 
-TEST(BamSequenceTest, DISABLED_MultipleFileConstructor){
-  std::vector<std::string> files;
-  files.push_back("test_seq.bam");
-  BamSequence s(files);
-}
-
 // The easiest way to test this is just compare it to bamtools output
-TEST(BamSequenceTest, DISABLED_pileup){
+// this test relies on the behavior of next and current
+TEST(BamSequenceTest, pileup){
   std::vector<std::string> files;
-  files.push_back("test_seq.bam");
+  files.push_back(DATA + "test_seq.bam");
   BamSequence s(files);
+
+  while(s.next() == 'D');
 
   std::string result;
   result += s.current();
-  for(int i = 0; i < 60; i++){
+
+  for(int i = 0; i < (86*3)-1; i++){
     result += s.next();
   }
+
+  //result = result.substr(86*2, 86);
+
+  std::cout << s.Position() << std::endl;
   
-  // TODO: Fill this up with the actual data
+  // For this test we use what our algorithim can decipher based on ties pileup results are in teh comments
   std::string expected = "";
-  expected += "12345678901234567890";
-  expected += "12345678901234567890";
-  expected += "12345678901234567890";
+  expected += "TGCCCGATAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCT"; // 86
+  expected += "AACCCTAACCCTAACCCTAACCCTAACCCAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAGCCCCTACCCCTAACCCTAA";
+  expected += "CCCTAACCCCAACCAAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTTAACCCAAAC";
+  //expected += "TKTCCGATAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCT"; // 86
+  //expected += "AACCCTAACCCTAACCCTAACCCTAACCCAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAA";
+  //expected += "CCCTAACCCTAACCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCCTAACCCTAACCCTAAAC"; //CC TAAACCCT";
+
+
+
+  EXPECT_EQ(expected.size(), result.size());
 
   EXPECT_EQ(expected, result);
 }
@@ -44,30 +69,33 @@ TEST(BamSequenceTest, DISABLED_rewind){
 
 }
 
-TEST(BamSequenceTest, DISABLED_next){
-  // Make sure we can't walk off the string
-  // BamSequence e("empty.bam");
+TEST(BamSequenceTest, next){
+  // Make sure we can traverse a few alignments without error
+  std::vector<std::string> files;
+  files.push_back(DATA + "test_seq.bam");
+  files.push_back(DATA + "test_seq2.bam");
+  BamSequence real(files);
+  for(int i=0; i < 9993; i++)
+    EXPECT_EQ('D', real.next()) << "Read " << i + 1 << " has no D. Position: " << real.Position();
+  
+  for(int i=0; i < 1000; i++)
+    EXPECT_NE('\0', real.next()) << "Read " << i + 1 << " has found null. Position: " << real.Position();
+  
 
-  // bool res = true;
-  // if(e.next()){
-  //   res = false;
-  // }
-
-  // EXPECT_EQ(true, res);
-
-  BamSequence s("DATAabcd.bam");
-  EXPECT_EQ('b', s.next());
-  EXPECT_EQ('c', s.next());
-  EXPECT_EQ('d', s.next());
-  EXPECT_EQ('\0', s.next());
-  EXPECT_EQ('\0', s.next());
+  //Test walking off the edge
+  //BamSequence s("abcd.bam");
+  //EXPECT_EQ('b', s.next());
+  //EXPECT_EQ('c', s.next());
+  //EXPECT_EQ('d', s.next());
+  //EXPECT_EQ('\0', s.next());
+  //EXPECT_EQ('\0', s.next());
   //EXPECT_EQ(false, !!s.next()); //Passes but annoying warning
 }
 
 
-TEST(BamSequenceTest, DISABLED_IsMatch){
-  BamSequence s1("DATAtest_seq.bam");//"ATTACGACTAGGTA");
-  StringSequence s2("AGGTA");
+TEST(BamSequenceTest, IsMatch){
+  BamSequence s1(DATA + "test_seq.bam");
+  StringSequence s2("CTAACCC");
   
   EXPECT_FALSE( s1.isMatch(s2) );
   
@@ -75,7 +103,7 @@ TEST(BamSequenceTest, DISABLED_IsMatch){
 
   EXPECT_TRUE( s1.isMatch(s2) );
 
-  EXPECT_EQ('A', s1.current());
+  EXPECT_EQ('C', s1.current());
 
   do{
     EXPECT_EQ(s2.current(), s1.current());
@@ -86,7 +114,7 @@ TEST(BamSequenceTest, DISABLED_IsMatch){
 
 // This isn't implemented for bams
 TEST(BamSequenceTest, concat){
-  BamSequence s("DATAtest_seq.bam");
+  BamSequence s(DATA+"test_seq.bam");
   
   EXPECT_THROW(s += 'c', BamSequence::NotImplementedException);
 }
