@@ -86,7 +86,6 @@ TEST(BamSequenceTest, next){
   //EXPECT_EQ('d', s.next());
   //EXPECT_EQ('\0', s.next());
   //EXPECT_EQ('\0', s.next());
-  //EXPECT_EQ(false, !!s.next()); //Passes but annoying warning
 }
 
 
