@@ -15,6 +15,7 @@ class StringSequence : public Sequence {
   
  public:
   // Constructor / Destructor
+  StringSequence(void): m_seq(""), m_idx(0) {}
   StringSequence(std::string s): m_seq(s), m_idx(0) {}
   virtual ~StringSequence() {}
 

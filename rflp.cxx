@@ -3,10 +3,10 @@
 #include <vector>
 #include <iostream>
 #include <Sequence.h>
-#include <Marker.h>
+// #include <Marker.h>
 #include <Enzyme.h>
-#include <BamSequence>
-#include <StringSequence>
+#include <BamSequence.h>
+#include <StringSequence.h>
 
 using namespace std;
 
@@ -20,9 +20,6 @@ int main(int argc, const char* argv[] )
 {
 
   // General TODO
-  // Read in the bam file as a sequence
-  // This means doing some form of pileup
-
   // Conduct RFLP store as another useful file format (presumably text)
   // Test Enzyme and Marker computing using c code (also may be useful to print fragments)
   // Restructure reading enzyme and markers from files
@@ -47,51 +44,51 @@ int main(int argc, const char* argv[] )
 
 
   Sequence * seq;
-  vector<Sequence *> enzymes;
+  vector<Enzyme *> enzymes;
   vector<Sequence *> markers;
   
   // Load the files
   try{
     // TODO: Incorporate file reader based on filetype
-    Sequence *seq = new BamSequence(inputFilename);
+    Sequence *seq = new BamSequence(bamFilename);
     
     // Here the cut, position is the start of the second half
-    enzymes.push( new Enzyme("CTGCAG", "pstI", 5) );
-    markers.push( new Marker("GCTGCCCACTTCTTCCAGAGGGCCTGGCCATGGGTGAGGGCCCTGGGTAGAAGACCCC");
+    enzymes.push_back( new Enzyme("CTGCAG", "pstI", 5) );
+    enzymes.back()->PrintSelf(std::cout);
+    markers.push_back( new StringSequence("GCTGCCCACTTCTTCCAGAGGGCCTGGCCATGGGTGAGGGCCCTGGGTAGAAGACCCC") );
   }
   // TODO: More restrictive error handling
   catch( ... ){
-    cerr << "Error reading " << inputFilename << endl;
+    cerr << "Error reading " << bamFilename << endl;
     exit(1);
   }
   
   
   // Have each enzyme digest the genome while checking for markers
   char read;
-  int num_enzymes = enzymes.length(); // we assume the enzyme and marker list don't change
-  int num_markers = markers.length();
-  Sequence* [] fragments    = new Sequence*[num_enzymes];      // 2d arrays of pointers
-  Sequence* [] marked_frags = new Sequence*[num_enzymes];      // 2d arrays of pointers
-  int       [] skips        = new      int[num_enzymes];       // Handles skiping matches
-  bool    * [] marks        = new     bool[num_enzymes];       // Keeps track of when a marker has been identified.
+  int num_enzymes = enzymes.size(); // we assume the enzyme and marker list don't change
+  int num_markers = markers.size();
+  Sequence** fragments    = new Sequence* [num_enzymes];      // 1d arrays of pointers
+  Sequence*** marked_frags= new Sequence** [num_enzymes];      // 2d arrays of pointers
+  int     *  skips        = new      int    [num_enzymes];       // Handles skiping matches
+  bool    ** marks        = new     bool*   [num_enzymes];       // Keeps track of when a marker has been identified.
 
   // Init arrays
   for( int i=0; i < num_enzymes; i++){
     
-    fragments[i]    = new Sequence*[num_markers];
+    fragments[i]    = new StringSequence("");
     marked_frags[i] = new Sequence*[num_markers];
     marks[i]        = new     bool[num_markers];
     
     for( int j=0; j < num_markers; j++){
-      fragments   [i][j]    = new StringSequence();
       marked_frags[i][j]    = NULL;
-      marks     [i][j]    = false;
+      marks       [i][j]    = false;
     }
     skips[i] = 0;
   }
 
   // Loop through the genome
-  read = read.begin();
+  read = seq->begin();
   do {   
     // Let the enzymes digest
     for( int i = 0; i < num_enzymes; i++ ){
@@ -100,14 +97,14 @@ int main(int argc, const char* argv[] )
       //    We may want to verify that enzymes won't cut marker to see if this is an issue
       if(skips[i] != 0){
 	skips[i]--;
-	next;
+	continue;
       }
       
       // Check to see if the enzyme can cut at this pos in the sequence
-      if ( seq->isMatch(enzymes[i]) ){
-	*fragments[i] += enzymes[i]->first();
+      if ( seq->isMatch(*enzymes[i]) ){
+	*(fragments[i]) += enzymes[i]->first();
 
-	marked = false;
+	bool marked = false;
 	for(int m=0;m<num_markers;m++)
 	  marked = marked || marks[i][m];
 
@@ -133,7 +130,7 @@ int main(int argc, const char* argv[] )
       // NOTE: Skips are not as usefull here since a second match is unlikely by design
       //       and in 99% of cases would return the same fragment (but may give perf boost)
       
-      if( seq->isMatch(markers[i]) ){
+      if( seq->isMatch(*markers[i]) ){
 	for(int e=0; e < num_enzymes;e++){
 	  marks[e][i] = true;
 	  
@@ -143,7 +140,7 @@ int main(int argc, const char* argv[] )
       }
       
     }// end for marker
-  }while( read = seq.next() );
+  }while( read = seq->next() );
 
   // Process Fragments
 }

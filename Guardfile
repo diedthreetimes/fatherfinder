@@ -78,12 +78,12 @@ module ::Guard
         end
       end
 
-      # TODO: Remove this
+
       ::Guard::UI.info("Running: #{paths.join(' ')}", :reset => true)
       status = paths.map do |p|
-        [system('./'+p), p]
+        [system('./'+p), p] if File.exists? p
       end
-      failed_tests = status.select{|x| !x[0]}.map{|x| x[1]}
+      failed_tests = status.compact.select{|x| !x[0]}.map{|x| x[1]}
       if !failed_tests.empty?
         ::Guard::Notifier.notify(
                                  "Test #{failed_tests.join(' ')} failed!", #TODO: Add why it failed

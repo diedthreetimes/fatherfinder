@@ -43,6 +43,8 @@ public:
   virtual Sequence& operator += (Sequence & other){ return this->concat(other); }
   virtual Sequence& concat(const char & other)= 0;
   virtual Sequence& operator += (const char& other){ return this->concat(other); }
+  virtual Sequence& concat(const std::string o){ for(int i=0;i<o.size();i++) (*this)+=o[i]; }
+  virtual Sequence& operator += (const std::string other){ return this->concat(other); }
 
   // ------------------------------
   // Compare sequences

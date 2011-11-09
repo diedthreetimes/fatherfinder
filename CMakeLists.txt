@@ -21,9 +21,13 @@ macro (add_gtest NAME GROUP )
   endif()
 endmacro (add_gtest) 
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
+find_package(BamTools REQUIRED)
+include_directories (${BAMTOOLS_INCLUDE_DIRS})
+link_directories (${BAMTOOLS_LIBRARIES})
 
 include_directories (Sequences)
 add_subdirectory (Sequences)
 
-# add_executable(rflp rflp.cxx)
-# target_link_libraries (rflp Sequences) # if we need to link bamtools here than we need to do a find package first
+add_executable(rflp rflp.cxx)
+target_link_libraries (rflp Sequences bamtools) # if we need to link bamtools here than we need to do a find package first
