@@ -114,8 +114,10 @@ int main(int argc, const char* argv[] )
       if ( seq->isMatch(*enzymes[i]) ){
 	*(fragments[i]) += enzymes[i]->first();
 
-	std::cout << "Cut found!" << std::endl;
-	fragments[i]->PrintSelf(std::cout);
+	if(DEBUG){
+	  std::cout << "Cut found!" << std::endl;
+	  fragments[i]->PrintSelf(std::cout);
+	}
 	bool marked = false;
 	for(int m=0;m<num_markers;m++)
 	  marked = marked || marks[i][m];
