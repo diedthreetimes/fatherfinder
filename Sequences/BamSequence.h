@@ -37,22 +37,18 @@ class BamSequence : public Sequence {
 
   // TODO: Copy Constructor
   
-  // Implement the virtual functions
+  // Implement the virtual required functions
   virtual char current();
   virtual char next();
   virtual char rewind(int n);
+  virtual int length(){throw notImplemented;}
 
-  virtual Sequence& concat(const Sequence& other){ throw notImplemented; };
-  virtual Sequence& concat(const char& c) {throw notImplemented; };
+  virtual Sequence& concat(const Sequence& other){ throw notImplemented; }
+  virtual Sequence& concat(const char& c) {throw notImplemented; }
   
-  virtual void PrintSelf(std::ostream& s){
-    //s << m_alignment.Position << " : "<< m_idx << std::endl;
-    //s << m_alignment.AlignedBases << std::endl;
-    //s << m_alignment.AlignedBases.length() << std::endl;
-    //s << m_alignment.QueryBases << std::endl;
-    //s << m_alignment.QueryBases.length() << std::endl;
-    //s << m_alignment.Length << std::endl << std::endl;
-  }
+  // Overide some of the defaults
+  virtual bool isMatch(Sequence &);
+  virtual void PrintSelf(std::ostream& s){  }
   
   int Position(void){ return cur_pos; }
 
@@ -60,11 +56,11 @@ class BamSequence : public Sequence {
  private:
   BamTools::BamMultiReader m_reader;
   
+  // TODO: refactor these names
   bool read_all;
   char m_cur;
   int cur_pos;
   std::deque<char> m_ring;
-  //boost::circular_buffer<char> m_ring;
   std::deque<BamTools::BamAlignment> m_alignments;
 
  // Util functions

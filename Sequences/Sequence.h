@@ -29,10 +29,11 @@ public:
   virtual char rewind(int n) =0;  
   // Move to the begining of the sequence;
   virtual char begin(){ return rewind(-1); }
+  // Return the length of this sequence
+  virtual int length()=0;
   //TODO: hasNext()
   //TODO: skip()
-  //TODO: length()
-  //TODO: FIX sequences to start at pos -1 thus begin works better
+  //TODO: (think more about this, and maybe implement end) FIX sequences to start at pos -1 thus begin works better
   
   // ------------------------------
   // Mutate Sequences

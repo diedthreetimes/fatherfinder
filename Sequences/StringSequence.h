@@ -24,6 +24,7 @@ class StringSequence : public Sequence {
   virtual char current();
   virtual char next();
   virtual char rewind(int n);
+  virtual int  length();
 
   virtual Sequence& concat(const Sequence& other);
   virtual Sequence& concat(const char& c);

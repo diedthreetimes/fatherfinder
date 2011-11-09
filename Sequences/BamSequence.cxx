@@ -145,3 +145,35 @@ char BamSequence::calc_position(int i)
   
   return max_c;
 }
+
+bool BamSequence::isMatch(Sequence & other)
+{
+  char o_cur = other.begin();
+  char cur = this->current();
+
+  if( !o_cur || !cur){
+    return false;
+  }
+  
+  retrieve(other.length());
+  std::deque<char>::iterator it = m_ring.begin();
+  
+  int moved = 0;
+  bool match = true;
+  // Walk along both strings, breaking when we have no match
+  do {
+    if( o_cur != cur ){
+      match = false;
+      break;
+    }
+
+    moved++;
+    cur = *it++;
+  } while( o_cur = other.next() );
+  // If we've made it without any of them not matching match will be true
+
+  // Rewind other
+  other.begin();
+  
+  return match;
+}

@@ -33,6 +33,11 @@ char StringSequence::rewind(int n)
   return current();
 }
 
+int StringSequence::length()
+{
+  return m_seq.length();
+}
+
 // TODO: Make this work for a generic seuqence
 Sequence& StringSequence::concat(const Sequence& other)
 {

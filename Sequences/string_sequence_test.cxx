@@ -31,6 +31,12 @@ TEST(StringSequenceTest, next){
   //EXPECT_EQ(false, !!s.next()); //Passes but annoying warning
 }
 
+TEST(StringSequenceTest, length){
+  StringSequence a("123456");
+  
+  EXPECT_EQ(6, a.length());
+}
+
 //TODO: Finish testing this class and method
 TEST(StringSequenceTest, IsMatch){
   StringSequence s1("ATTACGACTAGGTA");
