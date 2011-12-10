@@ -2,7 +2,7 @@
 #include "BamSequence.h"
 #include "StringSequence.h"
 
-std::string DATA = "bin/test/data/";
+std::string DATA = "data/test/";
 
 TEST(BamSequenceTest, SingleFileConstructor){
   BamSequence s(DATA + "test_seq.bam");

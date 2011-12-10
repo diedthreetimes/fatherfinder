@@ -43,17 +43,18 @@ BamSequence::~BamSequence()
 
 void BamSequence::init()
 {
-  //m_ring = boost::circular_buffer<char>(50);
 
-  //m_alignments.push_back( BamTools::BamAlignment() );
-  //m_reader.GetNextAlignment(m_alignments.back());
+  // For now we skip to the first write, this helps when looking at only a certain chromosome
+  //  This may cause certain errors if two different people's reads don't start in the same place
+  m_alignments.push_back( BamTools::BamAlignment() );
+  m_reader.GetNextAlignment(m_alignments.back());
   
-  //cur_pos = m_alignments.back().Position;
-  //m_cur = calc_position(cur_pos);
-  
-  read_all = false;
-  cur_pos = -1;
-  next();
+  cur_pos = m_alignments.back().Position;
+  m_cur = calc_position(cur_pos);
+ 
+  //read_all = false;
+  //cur_pos = -1;
+  //next();
 
   
 }

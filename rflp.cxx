@@ -94,6 +94,8 @@ int main(int argc, const char* argv[] )
   // Loop through the genome
   read = seq->begin();
   
+  std::cout << "Starting at position " << ((BamSequence *)seq)->Position() << std::endl;
+
   int p = 0;
   do {   
     p += 1;
@@ -115,8 +117,9 @@ int main(int argc, const char* argv[] )
 	*(fragments[i]) += enzymes[i]->first();
 
 	if(DEBUG){
-	  std::cout << "Cut found!" << std::endl;
-	  fragments[i]->PrintSelf(std::cout);
+	  std::cout << "Cut found! L = " << fragments[i]->length() << std::endl;
+	  std::cout << "Pos = " << ((BamSequence *)seq)->Position();
+	  std::cout<< " Read = " << seq->current() << std::endl;
 	}
 	bool marked = false;
 	for(int m=0;m<num_markers;m++)
@@ -146,7 +149,7 @@ int main(int argc, const char* argv[] )
       
       if( seq->isMatch(*markers[i]) ){
 	if(DEBUG)
-	  std::cout << "Found a match" << std::endl;
+	  std::cout << "Found a marker match" << std::endl;
 	for(int e=0; e < num_enzymes;e++){
 	  marks[e][i] = true;
 	  
@@ -159,10 +162,15 @@ int main(int argc, const char* argv[] )
   }while( read = seq->next() );
 
   // Process Fragments
-
+  std::cout << "Writing out fragments" << std::endl;
   for(int e=0; e < num_enzymes; e++){
     for(int m=0; m < num_markers; m++){
-      marked_frags[e][m]->PrintSelf(std::cout);
+      if(marked_frags[e][m] == NULL)
+	std::cout << "No marker found";
+      else {
+	std::cout << "Markers found!";
+	marked_frags[e][m]->length();
+      }
     }
   }
 }
