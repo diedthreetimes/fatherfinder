@@ -10,12 +10,13 @@ local.properties
 
 
 #eclipse
-.loadpath
-.settings/
-.classpath
+# Keep theese things for the time being
+#.loadpath
+#.settings/
+#.classpath
 *.tmp
 *.bak
 *.swp
-.project
-.metadata
+#.project
+#.metadata
 *.launch
