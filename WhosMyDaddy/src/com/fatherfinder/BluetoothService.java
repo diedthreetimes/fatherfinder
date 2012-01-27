@@ -1,5 +1,10 @@
 package com.fatherfinder;
 
+/**
+ * This service is largely just pulled from the android docs and handles
+ * estabilishing and listening for bluetooth connections
+ */
+
 import android.app.Service;
 import android.content.Intent;
 import android.os.IBinder;
@@ -24,7 +29,8 @@ import android.util.Log;
  * This class does all the work for setting up and managing Bluetooth
  * connections with other devices. It has a thread that listens for
  * incoming connections, a thread for connecting with a device, and a
- * thread for performing data transmissions when connected.
+ * thread for performing data transmissions when connected. It does not
+ * howerver, handle discovery.
  */
 public class BluetoothService {	
 	// Debugging
