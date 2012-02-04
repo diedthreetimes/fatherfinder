@@ -45,6 +45,7 @@ public class DeviceList extends Activity {
 
     // Return Intent extra
     public static String EXTRA_DEVICE_ADDRESS = "device_address";
+    //TODO: add extra for other forms of communication
 
     // Member fields
     private BluetoothAdapter mBtAdapter;
