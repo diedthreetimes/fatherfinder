@@ -223,6 +223,41 @@ public class BluetoothService {
     }
     
     /**
+     * Read from the ConnectedThread in an unsynchronized manner
+     * Note, this is a blocking call
+     * @return the bytes read
+     * @see ConnectedThread#read()
+     */
+    public String read() {
+        // Create temporary object
+        ConnectedThread r;
+        // Synchronize a copy of the ConnectedThread
+        synchronized (this) {
+            if (mState != STATE_CONNECTED) return null;
+            r = mConnectedThread;
+        }
+        // Perform the write unsynchronized
+        return r.read();
+    }
+    
+    /**
+     * Sets the readLoop flag to signify the behavior of socket reads
+     * @param flag The desired behavior of the read loop. \
+     *     True[on] signifies that all messages will be passed to the handler as they arrive. 
+     * @see ConnectedThread#setReadLoop()
+     */
+    public void setReadLoop(boolean flag){
+	   	 ConnectedThread r;
+	     // Synchronize a copy of the ConnectedThread
+	     synchronized (this) {
+	         if (mState != STATE_CONNECTED) return;
+	         r = mConnectedThread;
+	     }
+	     // Perform the write unsynchronized
+	     r.setReadLoop(flag);
+    }
+    
+    /**
      * Indicate that the connection attempt failed and notify the UI Activity.
      */
     private void connectionFailed() {
@@ -418,6 +453,7 @@ public class BluetoothService {
         private final BluetoothSocket mmSocket;
         private final InputStream mmInStream;
         private final OutputStream mmOutStream;
+        private boolean mReadLoop;
 
         public ConnectedThread(BluetoothSocket socket, String socketType) {
             Log.d(TAG, "create ConnectedThread: " + socketType);
@@ -437,29 +473,76 @@ public class BluetoothService {
             mmOutStream = tmpOut;
         }
 
-        public void run() {
+       
+        
+        /**
+         * Sets the readLoop flag to signify the behavior of socket reads
+         * 
+         * Some cycles may be required before the change takes into affect.
+         * As a result, a packet may be processed incorrectly.
+         *   
+         * True(on) indicates that all messages will be passed to the handler as they arive.
+         * False(off) indicates that messages will only be read on demand via {@link #read()}
+         * @param flag The desired behavior of the read loop.
+         */
+        public void setReadLoop(boolean flag) {
+			mReadLoop = flag; 
+		}
+
+        /**
+         * Read from the ConnectedThread in an unsynchronized manner
+         * 
+         * This is a blocking call and will only return data if the readLoop flag is false
+         * @return the bytes read
+         * @see ConnectedThread#read()
+         */
+		public String read() {
+			// read should not be used if packets are being read directly off the wire
+			if(mReadLoop){
+				return null;
+			}
+			
+			byte[] buffer = new byte[1024]; //TODO: Investigate this being the maximum buffer size. Make sure all message sizes are allowed
+            int bytes;
+			
+            
+            try{
+            	bytes = mmInStream.read(buffer);
+            } catch (IOException e){
+            	Log.e(TAG, "disconnected", e);
+                connectionLost();
+                // Start the service over to restart listening mode
+                BluetoothService.this.start();
+                return null;
+            }
+            
+			return new String(buffer, 0, bytes);
+		}
+
+		public void run() {
             Log.i(TAG, "BEGIN mConnectedThread");
             byte[] buffer = new byte[1024]; //TODO: Investigate this being the maximum buffer size. Make sure all message sizes are allowed
             int bytes;
 
             // Keep listening to the InputStream while connected
             while (true) {
-                try {
-                    // Read from the InputStream
-                    bytes = mmInStream.read(buffer);
-
-                    // TODO: All traffic is immediately forwarded off to the consumer. Try and see if we could emulate TCP here
-                    //      With this we may be able to get rid of the strange multiple handler business
-                    // Send the obtained bytes to the UI Activity
-                     mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
-                            .sendToTarget();
-                } catch (IOException e) {
-                    Log.e(TAG, "disconnected", e);
-                    connectionLost();
-                    // Start the service over to restart listening mode
-                    BluetoothService.this.start();
-                    break;
-                }
+            	//TODO: find away to restart this without polling
+            	if(mReadLoop){
+	                try {
+	                    // Read from the InputStream
+	                    bytes = mmInStream.read(buffer);
+	
+	                    // Send the obtained bytes to the UI Activity
+	                     mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
+	                            .sendToTarget();
+	                } catch (IOException e) {
+	                    Log.e(TAG, "disconnected", e);
+	                    connectionLost();
+	                    // Start the service over to restart listening mode
+	                    BluetoothService.this.start();
+	                    break;
+	                }
+            	}
             }
         }
 
