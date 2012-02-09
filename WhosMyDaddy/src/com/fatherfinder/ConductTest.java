@@ -15,8 +15,12 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.view.View;
+import android.view.View.OnClickListener;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 /*
@@ -56,16 +60,16 @@ public class ConductTest extends Activity {
     //TODO: Change these layouts to be buttons that say (conduct test)
     //     and then display the results
     // Layout Views
-    private ListView mConversationView;
-    private Button mSendButton;
+    private ListView mMessageLogView;
+    private Button mStartButton;
     
-    // Name of the connected device
-    private String mConnectedDeviceName = null;
     //TODO: This is needed to ensure that the bluetooth is turned on. Think about refactoring into service
     // Local Bluetooth adapter
     private BluetoothAdapter mBluetoothAdapter = null;
     // Member object for the chat services
     private BluetoothService mMessageSerivce = null; //TODO: make this an interface
+    // Array adapter for the conversation thread
+    private ArrayAdapter<String> mMessageLogArrayAdapter; //TODO: remove this it is jsut for testing
     
 	/**
 	 * @see android.app.Activity#onCreate(Bundle)
@@ -126,30 +130,21 @@ public class ConductTest extends Activity {
         Log.d(TAG, "setupChat()");
 
         // Initialize the array adapter for the conversation thread
-        mConversationArrayAdapter = new ArrayAdapter<String>(this, R.layout.message);
-        mConversationView = (ListView) findViewById(R.id.in);
-        mConversationView.setAdapter(mConversationArrayAdapter);
-
-        // Initialize the compose field with a listener for the return key
-        mOutEditText = (EditText) findViewById(R.id.edit_text_out);
-        mOutEditText.setOnEditorActionListener(mWriteListener);
+        // This maps array data to the view
+        mMessageLogArrayAdapter = new ArrayAdapter<String>(this, R.layout.message);
+        mMessageLogView = (ListView) findViewById(R.id.message_list);
+        mMessageLogView.setAdapter(mMessageLogArrayAdapter);
 
         // Initialize the send button with a listener that for click events
-        mSendButton = (Button) findViewById(R.id.button_send);
-        mSendButton.setOnClickListener(new OnClickListener() {
+        mStartButton = (Button) findViewById(R.id.button_start);
+        mStartButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
-                // Send a message using content of the edit text widget
-                TextView view = (TextView) findViewById(R.id.edit_text_out);
-                String message = view.getText().toString();
-                sendMessage(message);
+                doTest( 0 ); // Start the paternity test
             }
         });
 
         // Initialize the BluetoothService to perform bluetooth connections
-        mMessageSerivce = new BluetoothService(this, mHandler);
-
-        // Initialize the buffer for outgoing messages
-        mOutStringBuffer = new StringBuffer("");
+        mMessageSerivce = new BluetoothService(this, mHandler); //TODO: find out how to remove the need for this handler here
     }
 	
 	 @Override
@@ -189,11 +184,11 @@ public class ConductTest extends Activity {
     
     /**
      * Conducts a test.
-     * @param test  A string of text to send.
+     * @param test  Which test is being conducted
      */
     // This will fire off the desired test service and connect it to the chosen device
-    private void startTest(int test) {
-    	
+    private void doTest(int test) {
+    	// TODO: Switch on test & make the values constants
     	// TODO: Make less bluetooth specific perhaps by housing connection information inside
     	//       of the service
         // Check that we're actually connected before trying anything
@@ -214,52 +209,60 @@ public class ConductTest extends Activity {
      */
     //TODO: Just make this a boolean at some point
     private void displayResult(String m) {
-    	//TODO: modify the UI
+    	//TODO: modify the ui
+    	
+    	////////// TEST CODE //////////////////
+    	// Here we just add the result to the message adapter to look at later
+    	mMessageLogArrayAdapter.add(m);
+    	
+    	///////////////////////////////////////
+    	
     }
+
     
+    // This handler and associated methods handles displaying information of a connected device to the user
+    // TODO: see if this is actually necessary
+    // Name of the connected device
+    private String mConnectedDeviceName = null;
     
-    // TODO: Move this handler somehow into the TestService
+    // ActionBar is a 3.0 thing, will have to find another way if this functionality is desired TODO: remove cruft
+    //private final void setStatus(int resId) {
+        //final ActionBar actionBar = getActionBar();
+        //actionBar.setSubtitle(resId);
+    //}
+    //private final void setStatus(CharSequence subTitle) {
+        //final ActionBar actionBar = getActionBar();
+        //actionBar.setSubtitle(subTitle);
+    //}
+
     // The Handler that gets information back from the BluetoothService
     private final Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
             switch (msg.what) {
-            case MESSAGE_STATE_CHANGE:
+            case   BluetoothService.MESSAGE_STATE_CHANGE:
                 if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
                 switch (msg.arg1) {
                 case BluetoothService.STATE_CONNECTED:
-                    setStatus(getString(R.string.title_connected_to, mConnectedDeviceName));
-                    mConversationArrayAdapter.clear();
+                    //setStatus(getString(R.string.title_connected_to, mConnectedDeviceName));
                     break;
                 case BluetoothService.STATE_CONNECTING:
-                    setStatus(R.string.title_connecting);
+                    //setStatus(R.string.title_connecting);
                     break;
                 case BluetoothService.STATE_LISTEN:
                 case BluetoothService.STATE_NONE:
-                    setStatus(R.string.title_not_connected);
+                    //setStatus(R.string.title_not_connected);
                     break;
                 }
                 break;
-            case MESSAGE_WRITE:
-                byte[] writeBuf = (byte[]) msg.obj;
-                // construct a string from the buffer
-                String writeMessage = new String(writeBuf);
-                mConversationArrayAdapter.add("Me:  " + writeMessage);
-                break;
-            case MESSAGE_READ:
-                byte[] readBuf = (byte[]) msg.obj;
-                // construct a string from the valid bytes in the buffer
-                String readMessage = new String(readBuf, 0, msg.arg1);
-                mConversationArrayAdapter.add(mConnectedDeviceName+":  " + readMessage);
-                break;
-            case MESSAGE_DEVICE_NAME:
+            case BluetoothService.MESSAGE_DEVICE_NAME:
                 // save the connected device's name
-                mConnectedDeviceName = msg.getData().getString(DEVICE_NAME);
+                mConnectedDeviceName = msg.getData().getString(BluetoothService.DEVICE_NAME);
                 Toast.makeText(getApplicationContext(), "Connected to "
                                + mConnectedDeviceName, Toast.LENGTH_SHORT).show();
                 break;
-            case MESSAGE_TOAST:
-                Toast.makeText(getApplicationContext(), msg.getData().getString(TOAST),
+            case BluetoothService.MESSAGE_TOAST:
+                Toast.makeText(getApplicationContext(), msg.getData().getString(BluetoothService.TOAST),
                                Toast.LENGTH_SHORT).show();
                 break;
             }
