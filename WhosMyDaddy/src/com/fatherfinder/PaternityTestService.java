@@ -65,6 +65,8 @@ public class PaternityTestService extends Service {
      * @return The result of the test
      */
     public String conductTest(BluetoothService s, boolean client) {
+    	//Switch to synchronous message reading. 
+    	s.setReadLoop(false);
     	// The first step should be identifying which test is going to be conducted for now this is determined based on the class
     	
     	//TODO: think about extracting the client and server portions into different messages
@@ -74,10 +76,13 @@ public class PaternityTestService extends Service {
     		while(true){
     			String read = s.read();
     			if(read == null){
+    				if(D) Log.d(TAG, "Client: Read failed");
     				return null; //TODO: Should we raise? probably not
     			}
-    			else if(read == START_TEST_MESSAGE) //TODO: Should we look for which test was started as well?
+    			else if(read == START_TEST_MESSAGE) { //TODO: Should we look for which test was started as well?
+    				if(D) Log.d(TAG, "Client: Read succeeded");
     				break;
+    			}
     			//else
     				//TODO: something went wrong resend our start test?
     		}
@@ -86,6 +91,7 @@ public class PaternityTestService extends Service {
     	else{
     		// Acknowledge the start message
     		s.write(START_TEST_MESSAGE);
+    	
     		
     		s.write("Server says hello: " + Math.random());
     	}

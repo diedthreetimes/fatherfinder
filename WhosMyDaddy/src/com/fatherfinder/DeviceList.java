@@ -23,6 +23,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.AdapterView.OnItemClickListener;
 
+//TODO: FIX the UI for this activity.
+
 
 /**
  * Note: 1/23/12

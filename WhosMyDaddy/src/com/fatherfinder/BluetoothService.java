@@ -8,6 +8,10 @@ package com.fatherfinder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Queue;
 import java.util.UUID;
 
 import android.bluetooth.BluetoothAdapter;
@@ -67,6 +71,9 @@ public class BluetoothService {
     // Key names sent to mHandler
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
+    
+    private static final String MESSAGE_SEPERATOR = "%%%%"; //TODO: make this something smarter (non ascii)
+    private Queue<String> mMessageBuffer; // Possible DOS by fludding this buffer
 	
     /**
     * Constructor. Prepares a new Bluetooth session.
@@ -77,6 +84,7 @@ public class BluetoothService {
         mAdapter = BluetoothAdapter.getDefaultAdapter();
         mState = STATE_NONE;
         mHandler = handler;
+        mMessageBuffer = new LinkedList<String>();
     }
     
     // TODO: Work out communicating messages to multiple handlers
@@ -202,14 +210,20 @@ public class BluetoothService {
             mSecureAcceptThread.cancel();
             mSecureAcceptThread = null;
         }
+        
+        mMessageBuffer.clear();
+        
         setState(STATE_NONE);
     }
     
     /**
      * Write to the ConnectedThread in an unsynchronized manner
+     * 
+     * This does not add message boundries!!
      * @param out The bytes to write
      * @see ConnectedThread#write(byte[])
      */
+    //TODO: add message boundries at this level
     public void write(byte[] out) {
         // Create temporary object
         ConnectedThread r;
@@ -225,7 +239,8 @@ public class BluetoothService {
     
     //TODO: is this safe?
     public void write(String buffer) {
-    	write(buffer.getBytes());
+    	write((buffer + MESSAGE_SEPERATOR).getBytes());
+    	if(D) Log.d(TAG, "Write: " + buffer);
     }
     
     /**
@@ -235,6 +250,13 @@ public class BluetoothService {
      * @see ConnectedThread#read()
      */
     public String read() {
+    	if(!mMessageBuffer.isEmpty()){
+    		
+    		String buffer = mMessageBuffer.poll();
+    		if(D) Log.d(TAG, "Read: " + buffer + " from the queue");
+    		return buffer;
+    	}
+    	
         // Create temporary object
         ConnectedThread r;
         // Synchronize a copy of the ConnectedThread
@@ -243,7 +265,14 @@ public class BluetoothService {
             r = mConnectedThread;
         }
         // Perform the write unsynchronized
-        return r.read();
+        String readMessage = null;
+        for( String message : r.read().split(MESSAGE_SEPERATOR)){
+        	if(message != "")
+        		mMessageBuffer.add(message);
+        	readMessage = mMessageBuffer.poll();
+        }
+        if(D) Log.d(TAG, "Read: " + readMessage);
+        return readMessage;
     }
     
     /**
@@ -459,7 +488,7 @@ public class BluetoothService {
         private final BluetoothSocket mmSocket;
         private final InputStream mmInStream;
         private final OutputStream mmOutStream;
-        private boolean mReadLoop;
+        private boolean mReadLoop = true;
 
         public ConnectedThread(BluetoothSocket socket, String socketType) {
             Log.d(TAG, "create ConnectedThread: " + socketType);

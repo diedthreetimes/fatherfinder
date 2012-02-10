@@ -78,7 +78,7 @@ public class ConductTest extends Activity {
 	 */
 	@Override protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-        if(D) Log.e(TAG, "+++ ON CREATE +++");
+        if(D) Log.d(TAG, "+++ ON CREATE +++");
 
         // Set up the window layout
         setContentView(R.layout.main);
@@ -98,7 +98,7 @@ public class ConductTest extends Activity {
 	@Override
     public void onStart() {
         super.onStart();
-        if(D) Log.e(TAG, "++ ON START ++");
+        if(D) Log.d(TAG, "++ ON START ++");
 
         // If BT is not on, request that it be enabled.
         // setupChat() will then be called during onActivityResult
@@ -207,7 +207,12 @@ public class ConductTest extends Activity {
         
         // Start a PaternityTest and give it the BluetoothService for communication
         doBindTestService(PaternityTestService.class);
-        displayResult( mTestService.conductTest(mMessageSerivce, asClient) ); //TODO: Test that we have a service at this point
+         
+        // TODO: This is really tacky and should be cleaned up with some better way perhaps waiting until the service is bound
+        //          or we can bind to the service ahead of time
+        mAsClient = asClient;
+        if(mTestService != null)
+        	displayResult( mTestService.conductTest(mMessageSerivce, mAsClient) );
     }
     
     /**
@@ -269,11 +274,13 @@ public class ConductTest extends Activity {
                 byte[] readBuf = (byte[]) msg.obj;
                 // construct a string from the valid bytes in the buffer
                 // TODO: ASK the user if the test is desired.
-                // TODO: resolve the issue where both click conduct test at the same time, and two tests are initiated
+                // TODO: resolve the issue where both click conduct test at the same time, and two tests are initiated                
                 String readMessage = new String(readBuf, 0, msg.arg1);
+                if(D) Log.d(TAG, "Received the message: " + readMessage);
+                
                 String[] parsed_message = readMessage.split(PaternityTestService.SEPERATOR);
                 if(parsed_message.length > 1 && parsed_message[0] == PaternityTestService.START_TEST_MESSAGE) //TODO: refactor for arbitrary tests
-                	doTest(parsed_message[1], false);
+                	doTest(parsed_message[1], true);
                 break;
             case BluetoothService.MESSAGE_DEVICE_NAME:
                 // save the connected device's name
@@ -363,6 +370,7 @@ public class ConductTest extends Activity {
     
     private PaternityTestService mTestService;
     private boolean mIsBound = false;
+    private boolean mAsClient;
 
     private ServiceConnection mTestConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder service) {
@@ -372,6 +380,9 @@ public class ConductTest extends Activity {
             // service that we know is running in our own process, we can
             // cast its IBinder to a concrete class and directly access it.
             mTestService = ((PaternityTestService.LocalBinder)service).getService();
+            
+            //TODO: Is this really the best way to display the result?
+            displayResult( mTestService.conductTest(mMessageSerivce, mAsClient) );
             
         }
 
