@@ -222,6 +222,12 @@ public class BluetoothService {
         r.write(out);
     }
     
+    
+    //TODO: is this safe?
+    public void write(String buffer) {
+    	write(buffer.getBytes());
+    }
+    
     /**
      * Read from the ConnectedThread in an unsynchronized manner
      * Note, this is a blocking call

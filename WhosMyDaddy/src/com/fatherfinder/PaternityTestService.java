@@ -21,6 +21,10 @@ public class PaternityTestService extends Service {
     private static final String TAG = "PaternityTestService";
     private static final boolean D = true;
     
+    public static final String TEST_NAME = "PaternityTest";
+    public static final String SEPERATOR = ";;";
+    public static final String START_TEST_MESSAGE = "START";
+    
 	/**
      * Class for clients to access.  Because we know this service always
      * runs in the same process as its clients, we don't need to deal with
@@ -52,54 +56,42 @@ public class PaternityTestService extends Service {
     
     // Conduct the Test
     // TODO: just return a boolean
-    public String conductTest(BluetoothService s){
-    	s.setHandler(mHandler);
-    	
-    	//TODO: use the service to communicate (probably via a handler)
-    	// We may need to restructure the service to block, or we may just want to block here.
-    	// The idea being that we do not reply until we here a response, and we do not return a result until we hear a response
-    	// a well structured implementation will allow the activity to still be interactive while the test is being conducted
-    	// but this is not a requirement
-    	
-    	// As a side note, the communciation with the bluetoothservice would be better constructed like a socket.
-    	// This would rid the use of handlers and allow blocking communication relatively easily.
-    	// This will require some refactoring, with the bluetooth service since most of the functionaility will no longer
-    	// be necessary for now we just use a test implmentation using handler
-    	
-    	
+    /**
+     * Conduct the paternity test
+     * 
+     * If we are the server, we assume the client is already connected. If we are the client we let the server know we are here.
+     * @param s A connected bluetooth service
+     * @param client Conduct the test as server or client
+     * @return The result of the test
+     */
+    public String conductTest(BluetoothService s, boolean client) {
     	// The first step should be identifying which test is going to be conducted for now this is determined based on the class
     	
+    	//TODO: think about extracting the client and server portions into different messages
+    	if(client){
+    		// Say hello
+    		s.write(START_TEST_MESSAGE + SEPERATOR + TEST_NAME);
+    		while(true){
+    			String read = s.read();
+    			if(read == null){
+    				return null; //TODO: Should we raise? probably not
+    			}
+    			else if(read == START_TEST_MESSAGE) //TODO: Should we look for which test was started as well?
+    				break;
+    			//else
+    				//TODO: something went wrong resend our start test?
+    		}
+    		s.write("Client says hello: " + Math.random());
+    	}
+    	else{
+    		// Acknowledge the start message
+    		s.write(START_TEST_MESSAGE);
+    		
+    		s.write("Server says hello: " + Math.random());
+    	}
     	
-    	//!!!!! TODO:
     	
-    	return "HI";
+    	return s.read();
     }
-    
-    
-    //TODO: Remove this (see conductTest)
-    // The Handler that gets information back from the BluetoothService
-    private final Handler mHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-            case BluetoothService.MESSAGE_READ:
-                byte[] readBuf = (byte[]) msg.obj;
-                // construct a string from the valid bytes in the buffer
-                String readMessage = new String(readBuf, 0, msg.arg1);
-                //TODO: what do we do with messages as we read them?
-                //mConversationArrayAdapter.add(mConnectedDeviceName+":  " + readMessage);
-                break;
-            case BluetoothService.MESSAGE_DEVICE_NAME:
-            	// Display the connected devices name
-                Toast.makeText(getApplicationContext(), "Connected to "
-                               + msg.getData().getString(BluetoothService.DEVICE_NAME), Toast.LENGTH_SHORT).show();
-                break;
-            case BluetoothService.MESSAGE_TOAST:
-                Toast.makeText(getApplicationContext(), msg.getData().getString(BluetoothService.TOAST),
-                               Toast.LENGTH_SHORT).show();
-                break;
-            }
-        }
-    };
     
 }

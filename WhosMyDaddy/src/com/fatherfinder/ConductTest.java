@@ -39,6 +39,8 @@ import android.widget.Toast;
  *
  */
 
+
+//TODO: Add in a settings option to dissalow server/client communications.
 /**
  * This is the main activity that conducts the tests and displays the results. 
  * @author skyf
@@ -139,7 +141,7 @@ public class ConductTest extends Activity {
         mStartButton = (Button) findViewById(R.id.button_start);
         mStartButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
-                doTest( 0 ); // Start the paternity test
+                doTest( PaternityTestService.TEST_NAME, false ); // Start the paternity test as the server
             }
         });
 
@@ -185,9 +187,13 @@ public class ConductTest extends Activity {
     /**
      * Conducts a test.
      * @param test  Which test is being conducted
+     * @param asClient Flag indicating if the test is conducted as client or server
      */
     // This will fire off the desired test service and connect it to the chosen device
-    private void doTest(int test) {
+    //TODO: Investigate the possibility of DoS since multiple tests will be conducted at the same time
+    //         a possible fix could be to check if a test is already running, since they use the same bluetooth connection
+    //         this could be done in the handler
+    private void doTest(String test, boolean asClient) {
     	// TODO: Switch on test & make the values constants
     	// TODO: Make less bluetooth specific perhaps by housing connection information inside
     	//       of the service
@@ -201,7 +207,7 @@ public class ConductTest extends Activity {
         
         // Start a PaternityTest and give it the BluetoothService for communication
         doBindTestService(PaternityTestService.class);
-        displayResult( mTestService.conductTest(mMessageSerivce) ); //TODO: Test that we have a service at this point
+        displayResult( mTestService.conductTest(mMessageSerivce, asClient) ); //TODO: Test that we have a service at this point
     }
     
     /**
@@ -209,6 +215,9 @@ public class ConductTest extends Activity {
      */
     //TODO: Just make this a boolean at some point
     private void displayResult(String m) {
+    	if(m == null)
+    		mMessageLogArrayAdapter.add("Something went wrong. Try again");//TODO: something went wrong tell the user (use a resource string)
+    	
     	//TODO: modify the ui
     	
     	////////// TEST CODE //////////////////
@@ -251,9 +260,20 @@ public class ConductTest extends Activity {
                     break;
                 case BluetoothService.STATE_LISTEN:
                 case BluetoothService.STATE_NONE:
+                	//TODO: Kill test and discconect from service?
                     //setStatus(R.string.title_not_connected);
                     break;
                 }
+                break;
+            case BluetoothService.MESSAGE_READ:
+                byte[] readBuf = (byte[]) msg.obj;
+                // construct a string from the valid bytes in the buffer
+                // TODO: ASK the user if the test is desired.
+                // TODO: resolve the issue where both click conduct test at the same time, and two tests are initiated
+                String readMessage = new String(readBuf, 0, msg.arg1);
+                String[] parsed_message = readMessage.split(PaternityTestService.SEPERATOR);
+                if(parsed_message.length > 1 && parsed_message[0] == PaternityTestService.START_TEST_MESSAGE) //TODO: refactor for arbitrary tests
+                	doTest(parsed_message[1], false);
                 break;
             case BluetoothService.MESSAGE_DEVICE_NAME:
                 // save the connected device's name
@@ -315,6 +335,7 @@ public class ConductTest extends Activity {
             serverIntent = new Intent(this, DeviceList.class);
             startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
             return true;
+// TODO: Toast unimplemented (or remove)
 //        case R.id.insecure_connect_scan:
 //            // Launch the DeviceListActivity to see devices and do scan
 //            serverIntent = new Intent(this, DeviceListActivity.class);
