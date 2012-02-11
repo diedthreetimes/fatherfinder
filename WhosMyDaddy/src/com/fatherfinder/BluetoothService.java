@@ -264,15 +264,30 @@ public class BluetoothService {
             if (mState != STATE_CONNECTED) return null;
             r = mConnectedThread;
         }
-        // Perform the write unsynchronized
-        String readMessage = null;
-        for( String message : r.read().split(MESSAGE_SEPERATOR)){
-        	if(message != "")
-        		mMessageBuffer.add(message);
-        	readMessage = mMessageBuffer.poll();
-        }
+        
+        // Perform the read unsynchronized and parse
+        String readMessage = r.read();
+        if(readMessage == null) return null; //TODO: Why does this happen?
+        	
+        processMessage(readMessage);
+        readMessage = mMessageBuffer.poll();
+        
         if(D) Log.d(TAG, "Read: " + readMessage);
         return readMessage;
+    }
+    
+    private void processMessage(byte[] buffer, int length) {
+    	processMessage(new String(buffer, 0,length));
+    }
+    
+    // This will parse a message and add it to the queue
+    private void processMessage(String buffer) {
+    	for( String message: buffer.split(MESSAGE_SEPERATOR)) {
+    		if(message != ""){
+        		if(D) Log.d(TAG,"Adding to the queue: " + message);
+        		mMessageBuffer.add(message);
+        	}
+    	}
     }
     
     /**
@@ -565,11 +580,26 @@ public class BluetoothService {
             	if(mReadLoop){
 	                try {
 	                    // Read from the InputStream
-	                    bytes = mmInStream.read(buffer);
-	
-	                    // Send the obtained bytes to the UI Activity
-	                     mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
-	                            .sendToTarget();
+	                    bytes = mmInStream.read(buffer);	                    
+	                    
+	                    // Trim off the seperator
+	                    bytes = bytes - MESSAGE_SEPERATOR.getBytes().length;
+	                    
+	                    if(D) Log.d(TAG, "We've recieved a read: " + (new String(buffer,0,bytes)));
+	                    
+	                    // TODO: Think about how to deal with messages recieved while mReadLoop is false
+	                    //        We may be able to fix this just by finding a better mechanism to kill/restart the loop
+	                    //        For now use this quick possibly unsafe hack.
+	                    if(!mReadLoop)
+	                    	processMessage(buffer,bytes);
+	                    
+	                    else{
+		                    // Send the obtained bytes to the UI Activity
+		                    if(bytes > 0) {
+		                    	mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
+		                            .sendToTarget();
+		                    }
+	                    }
 	                } catch (IOException e) {
 	                    Log.e(TAG, "disconnected", e);
 	                    connectionLost();

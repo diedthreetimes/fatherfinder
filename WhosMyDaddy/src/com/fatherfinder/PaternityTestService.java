@@ -24,6 +24,7 @@ public class PaternityTestService extends Service {
     public static final String TEST_NAME = "PaternityTest";
     public static final String SEPERATOR = ";;";
     public static final String START_TEST_MESSAGE = "START";
+    public static final String ACK_START_MESSAGE = "ACK_START";
     
 	/**
      * Class for clients to access.  Because we know this service always
@@ -65,39 +66,86 @@ public class PaternityTestService extends Service {
      * @return The result of the test
      */
     public String conductTest(BluetoothService s, boolean client) {
+    	String ret = null;
+    			
     	//Switch to synchronous message reading. 
-    	s.setReadLoop(false);
+    	s.setReadLoop(false); // this may take a message to take affect
     	// The first step should be identifying which test is going to be conducted for now this is determined based on the class
     	
-    	//TODO: think about extracting the client and server portions into different messages
-    	if(client){
-    		// Say hello
-    		s.write(START_TEST_MESSAGE + SEPERATOR + TEST_NAME);
-    		while(true){
-    			String read = s.read();
-    			if(read == null){
-    				if(D) Log.d(TAG, "Client: Read failed");
-    				return null; //TODO: Should we raise? probably not
-    			}
-    			else if(read == START_TEST_MESSAGE) { //TODO: Should we look for which test was started as well?
-    				if(D) Log.d(TAG, "Client: Read succeeded");
-    				break;
-    			}
-    			//else
-    				//TODO: something went wrong resend our start test?
-    		}
-    		s.write("Client says hello: " + Math.random());
+    	try{
+	    	//TODO: think about extracting the client and server portions into different messages
+	    	if(client){
+	    		// Say hello
+	    		s.write(START_TEST_MESSAGE + SEPERATOR + TEST_NAME);
+	    		
+	    		if(D) Log.d(TAG, "Client is listening");
+	    		
+	    		while(true){
+	    			String read = s.read();
+	    			if(read == null){
+	    				if(D) Log.d(TAG, "Client: Read failed");
+	    				return null; //TODO: Should we raise? probably not
+	    			}
+	    			else if(read.equals(ACK_START_MESSAGE)) { //TODO: Should we look for which test was started as well?
+	    				if(D) Log.d(TAG, "Client: Read succeeded");
+	    				s.write(ACK_START_MESSAGE); 
+	    				//s.write(ACK_START_MESSAGE);
+	    				/*
+	    	    		 * This whole process is a huge hack to get around the 1 message dropped when switching
+	    	    		 * read styles. Once that issue is resolved the entire client server communication needs to be restructured
+	    	    		 * We will never receive the first message in any communication
+	    	    		 */
+	    				break;
+	    			}
+	    			else { //
+	    				if(D) Log.d(TAG, "Garbage was recieved" + read);
+	    				s.write(START_TEST_MESSAGE + SEPERATOR + TEST_NAME);
+	    			}
+	    				
+	    		}
+	    		s.write("Client says hello: " + Math.random());
+	    		ret = s.read();
+	    	}
+	    	else{
+	    		if(D) Log.d(TAG, "Server started");
+	    		// Acknowledge the start message
+	    		s.write(ACK_START_MESSAGE);
+	    		//s.write(ACK_START_MESSAGE); //TODO: See above
+	    	
+
+	    		String read;
+	    		
+	    		while(true) {
+	    			read = s.read();
+	    			if(read == null){
+	    				if(D) Log.d(TAG, "Server: Read failed");
+	    				return null; //TODO: Should we raise? probably not
+	    			}
+	    			else if(read.equals(START_TEST_MESSAGE + SEPERATOR + TEST_NAME)){ //
+	    				if(D) Log.d(TAG, "Ack not recieved, RE-ACK" + read);
+	    				s.write(ACK_START_MESSAGE);
+	    			}
+	    			else{
+	    				if(D) Log.d(TAG, "Non start recieved: " + read);
+	    				break; 
+	    			}
+	    		}
+	    		ret = read; // In this case our last read should be returned since it is never going to be an ACK
+	    		
+	    		s.write("Server says hello: " + Math.random());
+	    	}
     	}
-    	else{
-    		// Acknowledge the start message
-    		s.write(START_TEST_MESSAGE);
-    	
+    	finally {
     		
-    		s.write("Server says hello: " + Math.random());
+    		s.setReadLoop(true); //TODO: make this revert to its previous state
     	}
     	
     	
-    	return s.read();
+    	
+    	return ret;
+    	
+    	
     }
+    
     
 }

@@ -39,7 +39,7 @@ import android.widget.Toast;
  *
  */
 
-
+//TODO: Resolve the crash case when Paternity test fails (if the connection is killed while there is a read polling) (read returns null)
 //TODO: Add in a settings option to dissalow server/client communications.
 /**
  * This is the main activity that conducts the tests and displays the results. 
@@ -141,12 +141,12 @@ public class ConductTest extends Activity {
         mStartButton = (Button) findViewById(R.id.button_start);
         mStartButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
-                doTest( PaternityTestService.TEST_NAME, false ); // Start the paternity test as the server
+                doTest( PaternityTestService.TEST_NAME, true ); // Start the paternity test as the client
             }
         });
 
         // Initialize the BluetoothService to perform bluetooth connections
-        mMessageSerivce = new BluetoothService(this, mHandler); //TODO: find out how to remove the need for this handler here
+        mMessageSerivce = new BluetoothService(this, mHandler);
     }
 	
 	 @Override
@@ -194,6 +194,7 @@ public class ConductTest extends Activity {
     //         a possible fix could be to check if a test is already running, since they use the same bluetooth connection
     //         this could be done in the handler
     private void doTest(String test, boolean asClient) {
+    	if(D) Log.d(TAG, "Starting a paternity test with " + asClient);
     	// TODO: Switch on test & make the values constants
     	// TODO: Make less bluetooth specific perhaps by housing connection information inside
     	//       of the service
@@ -253,6 +254,7 @@ public class ConductTest extends Activity {
     private final Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
+            if(D) Log.d(TAG, "We recieved a message: " + msg.what);
             switch (msg.what) {
             case   BluetoothService.MESSAGE_STATE_CHANGE:
                 if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
@@ -279,8 +281,9 @@ public class ConductTest extends Activity {
                 if(D) Log.d(TAG, "Received the message: " + readMessage);
                 
                 String[] parsed_message = readMessage.split(PaternityTestService.SEPERATOR);
-                if(parsed_message.length > 1 && parsed_message[0] == PaternityTestService.START_TEST_MESSAGE) //TODO: refactor for arbitrary tests
-                	doTest(parsed_message[1], true);
+                
+                if(parsed_message.length > 1 && parsed_message[0].equals(PaternityTestService.START_TEST_MESSAGE)) //TODO: refactor for arbitrary tests
+                	doTest(parsed_message[1], false);
                 break;
             case BluetoothService.MESSAGE_DEVICE_NAME:
                 // save the connected device's name
