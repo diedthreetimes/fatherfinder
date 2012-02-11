@@ -88,7 +88,7 @@ public class PaternityTestService extends Service {
 	    			}
 	    			else if(read.equals(ACK_START_MESSAGE)) { //TODO: Should we look for which test was started as well?
 	    				if(D) Log.d(TAG, "Client: Read succeeded");
-	    				s.write(ACK_START_MESSAGE); 
+	    				//s.write(ACK_START_MESSAGE); 
 	    				//s.write(ACK_START_MESSAGE);
 	    				/*
 	    	    		 * This whole process is a huge hack to get around the 1 message dropped when switching

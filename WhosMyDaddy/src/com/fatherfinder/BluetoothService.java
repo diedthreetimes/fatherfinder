@@ -13,6 +13,8 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
 import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -73,7 +75,6 @@ public class BluetoothService {
     public static final String TOAST = "toast";
     
     private static final String MESSAGE_SEPERATOR = "%%%%"; //TODO: make this something smarter (non ascii)
-    private Queue<String> mMessageBuffer; // Possible DOS by fludding this buffer
 	
     /**
     * Constructor. Prepares a new Bluetooth session.
@@ -84,7 +85,6 @@ public class BluetoothService {
         mAdapter = BluetoothAdapter.getDefaultAdapter();
         mState = STATE_NONE;
         mHandler = handler;
-        mMessageBuffer = new LinkedList<String>();
     }
     
     // TODO: Work out communicating messages to multiple handlers
@@ -211,8 +211,6 @@ public class BluetoothService {
             mSecureAcceptThread = null;
         }
         
-        mMessageBuffer.clear();
-        
         setState(STATE_NONE);
     }
     
@@ -250,13 +248,6 @@ public class BluetoothService {
      * @see ConnectedThread#read()
      */
     public String read() {
-    	if(!mMessageBuffer.isEmpty()){
-    		
-    		String buffer = mMessageBuffer.poll();
-    		if(D) Log.d(TAG, "Read: " + buffer + " from the queue");
-    		return buffer;
-    	}
-    	
         // Create temporary object
         ConnectedThread r;
         // Synchronize a copy of the ConnectedThread
@@ -267,27 +258,9 @@ public class BluetoothService {
         
         // Perform the read unsynchronized and parse
         String readMessage = r.read();
-        if(readMessage == null) return null; //TODO: Why does this happen?
-        	
-        processMessage(readMessage);
-        readMessage = mMessageBuffer.poll();
         
         if(D) Log.d(TAG, "Read: " + readMessage);
         return readMessage;
-    }
-    
-    private void processMessage(byte[] buffer, int length) {
-    	processMessage(new String(buffer, 0,length));
-    }
-    
-    // This will parse a message and add it to the queue
-    private void processMessage(String buffer) {
-    	for( String message: buffer.split(MESSAGE_SEPERATOR)) {
-    		if(message != ""){
-        		if(D) Log.d(TAG,"Adding to the queue: " + message);
-        		mMessageBuffer.add(message);
-        	}
-    	}
     }
     
     /**
@@ -503,13 +476,15 @@ public class BluetoothService {
         private final BluetoothSocket mmSocket;
         private final InputStream mmInStream;
         private final OutputStream mmOutStream;
-        private boolean mReadLoop = true;
-
+        private boolean mForwardRead = true;
+        private BlockingQueue<String> mMessageBuffer;
+        	
         public ConnectedThread(BluetoothSocket socket, String socketType) {
             Log.d(TAG, "create ConnectedThread: " + socketType);
             mmSocket = socket;
             InputStream tmpIn = null;
             OutputStream tmpOut = null;
+            mMessageBuffer = new LinkedBlockingQueue<String>(); // TODO: add a capacity here to prevent doS
 
             // Get the BluetoothSocket input and output streams
             try {
@@ -536,7 +511,7 @@ public class BluetoothService {
          * @param flag The desired behavior of the read loop.
          */
         public void setReadLoop(boolean flag) {
-			mReadLoop = flag; 
+			mForwardRead = flag; 
 		}
 
         /**
@@ -548,26 +523,37 @@ public class BluetoothService {
          */
 		public String read() {
 			// read should not be used if packets are being read directly off the wire
-			if(mReadLoop){
+			if(mForwardRead){
 				return null;
 			}
 			
-			byte[] buffer = new byte[1024]; //TODO: Investigate this being the maximum buffer size. Make sure all message sizes are allowed
-            int bytes;
-			
-            
-            try{
-            	bytes = mmInStream.read(buffer);
-            } catch (IOException e){
-            	Log.e(TAG, "disconnected", e);
-                connectionLost();
-                // Start the service over to restart listening mode
-                BluetoothService.this.start();
-                return null;
-            }
-            
-			return new String(buffer, 0, bytes);
+			try {
+				return mMessageBuffer.take();
+			} catch (InterruptedException e) {
+				Log.e(TAG, "Message Read Interupted");
+				return null;
+			}
 		}
+		
+		// Call process on buffer
+		private void processMessage(byte[] buffer, int length) {
+	    	processMessage(new String(buffer, 0,length));
+	    }
+	    
+	    // This will parse a message and add it to the queue
+	    private void processMessage(String buffer) {
+	    	for( String message: buffer.split(MESSAGE_SEPERATOR)) {
+	    		if(message != ""){
+	        		if(D) Log.d(TAG,"Adding to the queue: " + message);
+	        		try {
+						mMessageBuffer.put(message);
+					} catch (InterruptedException e) {
+						Log.e(TAG, "Message add interupted.");
+						//TODO: possibly throw here
+					}
+	        	}
+	    	}
+	    }
 
 		public void run() {
             Log.i(TAG, "BEGIN mConnectedThread");
@@ -576,40 +562,34 @@ public class BluetoothService {
 
             // Keep listening to the InputStream while connected
             while (true) {
-            	//TODO: find away to restart this without polling
-            	if(mReadLoop){
-	                try {
-	                    // Read from the InputStream
-	                    bytes = mmInStream.read(buffer);	                    
+            	try {
+            		// Read from the InputStream
+            		bytes = mmInStream.read(buffer);	                    
 	                    
-	                    // Trim off the seperator
-	                    bytes = bytes - MESSAGE_SEPERATOR.getBytes().length;
+            		// Trim off the seperator
+            		bytes = bytes - MESSAGE_SEPERATOR.getBytes().length;
 	                    
-	                    if(D) Log.d(TAG, "We've recieved a read: " + (new String(buffer,0,bytes)));
-	                    
-	                    // TODO: Think about how to deal with messages recieved while mReadLoop is false
-	                    //        We may be able to fix this just by finding a better mechanism to kill/restart the loop
-	                    //        For now use this quick possibly unsafe hack.
-	                    if(!mReadLoop)
-	                    	processMessage(buffer,bytes);
-	                    
-	                    else{
-		                    // Send the obtained bytes to the UI Activity
-		                    if(bytes > 0) {
-		                    	mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
-		                            .sendToTarget();
-		                    }
+            		//if(D) Log.d(TAG, "We've recieved a read: " + (new String(buffer,0,bytes)));
+	                           
+                    if(!mForwardRead)
+                    	processMessage(buffer,bytes);                    
+                    else{
+	                    // Send the obtained bytes to the UI Activity
+	                    if(bytes > 0) {
+	                    	mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
+	                            .sendToTarget();
 	                    }
-	                } catch (IOException e) {
-	                    Log.e(TAG, "disconnected", e);
-	                    connectionLost();
-	                    // Start the service over to restart listening mode
-	                    BluetoothService.this.start();
-	                    break;
-	                }
-            	}
-            }
+                    }
+                } catch (IOException e) {
+                    Log.e(TAG, "disconnected", e);
+                    connectionLost();
+                    // Start the service over to restart listening mode
+                    BluetoothService.this.start();
+                    break;
+                }
+        	}
         }
+    
 
         /**
          * Write to the connected OutStream.
