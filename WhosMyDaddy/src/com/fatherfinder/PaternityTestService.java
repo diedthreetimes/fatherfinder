@@ -1,5 +1,8 @@
 package com.fatherfinder;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 import android.app.Service;
 import android.content.Intent;
 import android.os.Binder;
@@ -73,7 +76,8 @@ public class PaternityTestService extends Service {
     	// The first step should be identifying which test is going to be conducted for now this is determined based on the class
     	
     	try{
-	    	//TODO: think about extracting the client and server portions into different messages
+	    	//TODO: think about extracting the client and server portions into different functions
+    		//TODO: Simplify protocol if messages are guaranteed (they may not be)
 	    	if(client){
 	    		// Say hello
 	    		s.write(START_TEST_MESSAGE + SEPERATOR + TEST_NAME);
@@ -88,13 +92,6 @@ public class PaternityTestService extends Service {
 	    			}
 	    			else if(read.equals(ACK_START_MESSAGE)) { //TODO: Should we look for which test was started as well?
 	    				if(D) Log.d(TAG, "Client: Read succeeded");
-	    				//s.write(ACK_START_MESSAGE); 
-	    				//s.write(ACK_START_MESSAGE);
-	    				/*
-	    	    		 * This whole process is a huge hack to get around the 1 message dropped when switching
-	    	    		 * read styles. Once that issue is resolved the entire client server communication needs to be restructured
-	    	    		 * We will never receive the first message in any communication
-	    	    		 */
 	    				break;
 	    			}
 	    			else { //
@@ -145,6 +142,30 @@ public class PaternityTestService extends Service {
     	return ret;
     	
     	
+    }
+    
+    public byte [] getMarkerLengths(){
+    	//TODO: Implement Reading from SD (in an encyrpted fashion)
+    	int[] markerLengths = {1,2,3,4,5,6,7};
+    	String[] markerNames = {"Mark1","SecondMarker","MarkNumber3","Mark4","Mark5","Mark6","Mark7"};
+    	byte[] ret = null;
+    	
+    	for( String marker : markerNames ){
+    		MessageDigest digest=null;
+    	    try {
+    	        digest = MessageDigest.getInstance("SHA-256");
+    	    } catch (NoSuchAlgorithmException e1) {
+    	        Log.e(TAG, "SHA-256 is not supported");
+    	        return null; // TODO: Raise an error?
+    	    }
+    	    digest.reset();
+    	    
+    	    //Log.i("Eamorr",digest.digest(password.getBytes("UTF-8")).toString());
+    	}
+    	
+    	// First we hash the marker names
+    	
+    	return ret;
     }
     
     
