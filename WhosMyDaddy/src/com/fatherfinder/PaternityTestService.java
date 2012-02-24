@@ -59,7 +59,7 @@ public class PaternityTestService extends Service {
     
     
     // Conduct the Test
-    // TODO: just return a boolean
+    // TODO: just return a boolean (or better yet think about returning a type T when refactoring)
     /**
      * Conduct the paternity test
      * 
@@ -79,57 +79,12 @@ public class PaternityTestService extends Service {
 	    	//TODO: think about extracting the client and server portions into different functions
     		//TODO: Simplify protocol if messages are guaranteed (they may not be)
 	    	if(client){
-	    		// Say hello
-	    		s.write(START_TEST_MESSAGE + SEPERATOR + TEST_NAME);
-	    		
-	    		if(D) Log.d(TAG, "Client is listening");
-	    		
-	    		while(true){
-	    			String read = s.read();
-	    			if(read == null){
-	    				if(D) Log.d(TAG, "Client: Read failed");
-	    				return null; //TODO: Should we raise? probably not
-	    			}
-	    			else if(read.equals(ACK_START_MESSAGE)) { //TODO: Should we look for which test was started as well?
-	    				if(D) Log.d(TAG, "Client: Read succeeded");
-	    				break;
-	    			}
-	    			else { //
-	    				if(D) Log.d(TAG, "Garbage was recieved" + read);
-	    				s.write(START_TEST_MESSAGE + SEPERATOR + TEST_NAME);
-	    			}
-	    				
-	    		}
-	    		s.write("Client says hello: " + Math.random());
-	    		ret = s.read();
+	    		initiateClient(s);
+	    		ret= conductClientTest(s);
 	    	}
 	    	else{
-	    		if(D) Log.d(TAG, "Server started");
-	    		// Acknowledge the start message
-	    		s.write(ACK_START_MESSAGE);
-	    		//s.write(ACK_START_MESSAGE); //TODO: See above
-	    	
-
-	    		String read;
-	    		
-	    		while(true) {
-	    			read = s.read();
-	    			if(read == null){
-	    				if(D) Log.d(TAG, "Server: Read failed");
-	    				return null; //TODO: Should we raise? probably not
-	    			}
-	    			else if(read.equals(START_TEST_MESSAGE + SEPERATOR + TEST_NAME)){ //
-	    				if(D) Log.d(TAG, "Ack not recieved, RE-ACK" + read);
-	    				s.write(ACK_START_MESSAGE);
-	    			}
-	    			else{
-	    				if(D) Log.d(TAG, "Non start recieved: " + read);
-	    				break; 
-	    			}
-	    		}
-	    		ret = read; // In this case our last read should be returned since it is never going to be an ACK
-	    		
-	    		s.write("Server says hello: " + Math.random());
+	    		initiateServer(s);
+	    		ret = conductServerTest(s);
 	    	}
     	}
     	finally {
@@ -142,6 +97,72 @@ public class PaternityTestService extends Service {
     	return ret;
     	
     	
+    }
+    
+    
+    // Tell the client we heard them
+    private void initiateServer(BluetoothService s){
+    	if(D) Log.d(TAG, "Server started");
+		// Acknowledge the start message
+		s.write(ACK_START_MESSAGE);
+		//s.write(ACK_START_MESSAGE); //TODO: See above
+	
+
+		String read;
+		
+		while(true) {
+			read = s.read();
+			if(read == null){
+				if(D) Log.d(TAG, "Server: Read failed");
+				//TODO: Should we raise? yes
+			}
+			else if(read.equals(START_TEST_MESSAGE + SEPERATOR + TEST_NAME)){ //
+				if(D) Log.d(TAG, "Ack not recieved, RE-ACK" + read);
+				s.write(ACK_START_MESSAGE);
+			}
+			else{
+				if(D) Log.d(TAG, "Non start recieved: " + read);
+				break; //TODO: should we raise here?
+			}
+		}
+		
+    }
+    
+    // Tell the server we are listening
+    private void initiateClient(BluetoothService s){
+    	// Say hello
+    	s.write(START_TEST_MESSAGE + SEPERATOR + TEST_NAME);
+
+    	if(D) Log.d(TAG, "Client is listening");
+
+    	while(true){
+    		String read = s.read();
+    		if(read == null){
+    			if(D) Log.d(TAG, "Client: Read failed");
+    			//TODO: Should we raise? yes
+    		}
+    		else if(read.equals(ACK_START_MESSAGE)) { //TODO: Should we look for which test was started as well?
+    			if(D) Log.d(TAG, "Client: Read succeeded");
+    			s.write(ACK_START_MESSAGE);
+    			break;
+    		}
+    		else { //We didn't hear the ack resend.
+    			if(D) Log.d(TAG, "Garbage was recieved" + read);
+    			s.write(START_TEST_MESSAGE + SEPERATOR + TEST_NAME);
+    		}
+
+    	}
+    }
+    
+    private String conductClientTest(BluetoothService s){
+    	
+		s.write("Client says hello: " + Math.random());
+		return s.read();
+    }
+    
+    private String conductServerTest(BluetoothService s) {
+		s.write("Server says hello: " + Math.random());
+		return s.read();
     }
     
     public byte [] getMarkerLengths(){
