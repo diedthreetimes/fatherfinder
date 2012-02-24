@@ -105,7 +105,6 @@ public class PaternityTestService extends Service {
     	if(D) Log.d(TAG, "Server started");
 		// Acknowledge the start message
 		s.write(ACK_START_MESSAGE);
-		//s.write(ACK_START_MESSAGE); //TODO: See above
 	
 
 		String read;
@@ -154,6 +153,7 @@ public class PaternityTestService extends Service {
     	}
     }
     
+    // Actually perform the test (these will be overides from a testing base class (and can be the same function)
     private String conductClientTest(BluetoothService s){
     	
 		s.write("Client says hello: " + Math.random());
@@ -165,14 +165,15 @@ public class PaternityTestService extends Service {
 		return s.read();
     }
     
-    public byte [] getMarkerLengths(){
+    //TODO: Finish implementing this in a way that is compatible with openssh
+    public byte [][] getMarkerLengths(){
     	//TODO: Implement Reading from SD (in an encyrpted fashion)
     	int[] markerLengths = {1,2,3,4,5,6,7};
     	String[] markerNames = {"Mark1","SecondMarker","MarkNumber3","Mark4","Mark5","Mark6","Mark7"};
-    	byte[] ret = null;
+    	byte[][] ret = null;
     	
     	for( String marker : markerNames ){
-    		MessageDigest digest=null;
+    		MessageDigest digest = null;
     	    try {
     	        digest = MessageDigest.getInstance("SHA-256");
     	    } catch (NoSuchAlgorithmException e1) {
@@ -180,6 +181,8 @@ public class PaternityTestService extends Service {
     	        return null; // TODO: Raise an error?
     	    }
     	    digest.reset();
+    	    
+    	    digest.digest(marker.getBytes());
     	    
     	    //Log.i("Eamorr",digest.digest(password.getBytes("UTF-8")).toString());
     	}

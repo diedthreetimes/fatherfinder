@@ -5,6 +5,8 @@ package com.fatherfinder;
  * estabilishing and listening for bluetooth connections
  */
 
+//TODO: Double check that secure implies encryption and not just authentication
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
