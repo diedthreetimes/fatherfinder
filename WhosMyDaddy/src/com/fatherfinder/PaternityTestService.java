@@ -1,7 +1,14 @@
 package com.fatherfinder;
 
+import java.math.BigInteger;
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.spec.DSAPublicKeySpec;
+import java.security.spec.InvalidKeySpecException;
 
 import android.app.Service;
 import android.content.Intent;
@@ -19,6 +26,9 @@ import android.widget.Toast;
  * @author skyf
  *
  */
+
+// At the moment we use the built in BigInteger implementation to do our calculations.
+// TODO: Benchmark an openssl/gmp version
 public class PaternityTestService extends Service {
 	// Debugging
     private static final String TAG = "PaternityTestService";
@@ -28,6 +38,9 @@ public class PaternityTestService extends Service {
     public static final String SEPERATOR = ";;";
     public static final String START_TEST_MESSAGE = "START";
     public static final String ACK_START_MESSAGE = "ACK_START";
+    
+    //public/private keys
+    private BigInteger p, q, g;
     
 	/**
      * Class for clients to access.  Because we know this service always
@@ -41,6 +54,11 @@ public class PaternityTestService extends Service {
     }
     
     @Override
+    public void onCreate(){
+    	loadSharedKeys();
+    }
+    
+    @Override //TODO: do we need this? I don't think so since we only allow binding to the service
     public int onStartCommand(Intent intent, int flags, int startId) {
     	if(D)
     		Log.d(TAG, "Received start id " + startId + ": " + intent);
@@ -49,15 +67,13 @@ public class PaternityTestService extends Service {
         return START_REDELIVER_INTENT;
     }
 	
-	@Override public IBinder onBind(Intent intent) {
-		// TODO Put your code here
-		return mBinder;
-	}
-	
-	// This is the object that receives interactions from clients.
+    // This is the object that receives interactions from clients.
     private final IBinder mBinder = new LocalBinder();
     
-    
+	@Override public IBinder onBind(Intent intent) {
+		return mBinder;
+	}
+    	
     // Conduct the Test
     // TODO: just return a boolean (or better yet think about returning a type T when refactoring)
     /**
@@ -104,7 +120,7 @@ public class PaternityTestService extends Service {
     private void initiateServer(BluetoothService s){
     	if(D) Log.d(TAG, "Server started");
 		// Acknowledge the start message
-		s.write(ACK_START_MESSAGE);
+		s.write(ACK_START_MESSAGE); //TODO: we probably don't need any acks look closer
 	
 
 		String read;
@@ -155,18 +171,81 @@ public class PaternityTestService extends Service {
     
     // Actually perform the test (these will be overides from a testing base class (and can be the same function)
     private String conductClientTest(BluetoothService s){
+    	// Compute any precomputation
     	
-		s.write("Client says hello: " + Math.random());
+    	// Generate the Secrets
+    	
+    	//TODO: Unccoment this section and finish keygen bit
+    	//BigInteger rc  = randomRange(q);
+    	//BigInteger rc1 = randomRange(q);
+    	
+    	//Log.d(TAG, "RC: " + rc);
+    	//Log.d(TAG, "RC': " + rc1);
+    	//Log.d(TAG, "g: " + g);
+    	//Log.d(TAG, "q: " + q);
+    	//Log.d(TAG, "p: " + p);
+    	
+    	// Send info to server
+    	
+    	// Wait for server
+    	
+    	// Finish computation
+    	
+    	// Send result
+    	
+		s.write("Client says hello: " + g);
 		return s.read();
     }
     
     private String conductServerTest(BluetoothService s) {
+    	// Compute any precomputation
+    	
+    	// Wait for client
+    	
+    	// Send final computation and return
+    	
+    	
 		s.write("Server says hello: " + Math.random());
 		return s.read();
     }
     
+    
+    // Utility functions
+	// Load the common inputs, p q and g which are:
+	// p - a prime number
+	// q - the sub prime
+	// g - the base (generator)
+	private void loadSharedKeys(){
+		//TODO: Load these keys from a file
+		
+		// We probably won't use this, but here is a (rather long) way to generate them
+		//TODO: Delete this, just used as a reference (DSA is not supported)
+		/*
+		KeyPairGenerator kpg;
+		try {
+			kpg = KeyPairGenerator.getInstance("DSA");
+			kpg.initialize(1024);
+			KeyPair kp = kpg.genKeyPair();
+
+			KeyFactory fact = KeyFactory.getInstance("DSA");
+			DSAPublicKeySpec pub = fact.getKeySpec(kp.getPublic(),
+					DSAPublicKeySpec.class);
+
+			p = pub.getP();
+			q = pub.getQ();
+			g = pub.getG();
+		} catch (NoSuchAlgorithmException e) {
+			//TODO: What do we do if Service creation fails?
+			Log.e(TAG, "DSA key generation is not supported!");
+		} catch (InvalidKeySpecException e) {
+			Log.e(TAG, "DSA key generation is not supported!");
+		}
+        */
+        
+	}
+    
     //TODO: Finish implementing this in a way that is compatible with openssh
-    public byte [][] getMarkerLengths(){
+    private byte [][] getMarkerLengths(){
     	//TODO: Implement Reading from SD (in an encyrpted fashion)
     	int[] markerLengths = {1,2,3,4,5,6,7};
     	String[] markerNames = {"Mark1","SecondMarker","MarkNumber3","Mark4","Mark5","Mark6","Mark7"};
@@ -192,5 +271,16 @@ public class PaternityTestService extends Service {
     	return ret;
     }
     
-    
+    // Calculate a random number between 0 and range
+    private BigInteger randomRange(BigInteger range){
+    	//TODO: Is there anything else we should fall back on here perhaps openssl bn_range
+    	
+    	// TODO: Should we be keeping this rand around? 
+    	SecureRandom rand = new SecureRandom();
+    	BigInteger temp = new BigInteger(range.bitLength(), rand);
+    	while(temp.compareTo(range) > 0)
+    		temp = new BigInteger(range.bitLength(), rand);
+    	return temp;
+    	
+    }
 }

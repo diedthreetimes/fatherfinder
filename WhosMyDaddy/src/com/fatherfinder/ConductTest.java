@@ -210,7 +210,7 @@ public class ConductTest extends Activity {
         doBindTestService(PaternityTestService.class);
          
         // TODO: This is really tacky and should be cleaned up with some better way perhaps waiting until the service is bound
-        //          or we can bind to the service ahead of time
+        //          or we can bind to the service ahead of time (we should probably just bind ahead of time)
         mAsClient = asClient;
         if(mTestService != null)
         	displayResult( mTestService.conductTest(mMessageSerivce, mAsClient) );
