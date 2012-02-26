@@ -46,7 +46,8 @@ TEST(BamSequenceTest, pileup){
   }
 
   
-  // For this test we use what our algorithim can decipher based on ties pileup results are in teh comments
+  // This is what we expect pileup to return, based on our deterministic algorithim for deciding ties.
+  //    The results of bamptools pileup is in the comments
   std::string expected = "";
   expected += "TGCCCGATAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAACCCT"; // 86
   expected += "AACCCTAACCCTAACCCTAACCCTAACCCAACCCTAACCCTAACCCTAACCCTAACCCTAACCCTAGCCCCTACCCCTAACCCTAA";
