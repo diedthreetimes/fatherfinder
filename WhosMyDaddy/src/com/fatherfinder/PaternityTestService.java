@@ -10,6 +10,7 @@ import java.security.SecureRandom;
 import java.security.spec.DSAPublicKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import android.app.Service;
@@ -44,7 +45,7 @@ public class PaternityTestService extends Service {
     
     // The number of allowed mismatches
     private static final int ERROR_THRESHOLD = 0;
-    
+	
     //public/private keys
     private BigInteger p, q, g;
     
@@ -141,9 +142,12 @@ public class PaternityTestService extends Service {
 				if(D) Log.d(TAG, "Ack not recieved, RE-ACK" + read);
 				s.write(ACK_START_MESSAGE);
 			}
+			else if(read.equals(ACK_START_MESSAGE)){
+				break;
+			}
 			else{
 				if(D) Log.d(TAG, "Non start recieved: " + read);
-				break; //TODO: should we raise here?
+				break; //TODO: should we raise here? Or just continue looping
 			}
 		}
 		
@@ -214,30 +218,72 @@ public class PaternityTestService extends Service {
     		//TODO: Should this be a different hash?
     		// This is the following calculation all mod p
     		// H(y^Rc * bi^(1/Rc') )
-    		tcis.add(hash( y.modPow(rc, p).multiply( bis.get(i).modPow(rc1.modInverse(p), p) ) ));
+    		tcis.add(hash( y.modPow(rc, p).multiply( bis.get(i).modPow(rc1.modInverse(p), p) ).mod(p) ));
     	}
     	
-    	// tcis = tcis ^ tcjs (intersection)
+    	// tcis = tcis ^ tsjs (intersection)
     	tcis.retainAll(tsjs);
     	
     	int sharedLengths = tcis.size();
     	
     	// Send result
+    	if(D) Log.d(TAG, "Client calculated: " + String.valueOf(sharedLengths));
     	s.write(String.valueOf(sharedLengths));
     	
 		return String.valueOf(sharedLengths); //TODO: return a boolean based on ERROR_THRESHOLD
     }
     
     private String conductServerTest(BluetoothService s) {
-    	// Compute any precomputation
+    	//TODO: Why do we need two permutations?
+    	//TODO: should i only use one seeded secure random generator? probably
+    	// OFFLINE PHASE
+    	BigInteger rs  = randomRange(q); // Secret 1
+    	BigInteger rs1 = randomRange(q); // Secret 2
     	
-    	// Wait for client
+    	BigInteger y = g.modPow(rs, p);
     	
-    	// Send final computation and return
+    	List<BigInteger> ksjs = new ArrayList<BigInteger>(); // The set {ks1,ks2,...,ksi}
+    	for( String marker: getMarkerLengths() ){
+    		ksjs.add(hash(marker).modPow(rs1, p));
+    	}
+    	
+    	SecureRandom r = new SecureRandom();
+    	Collections.shuffle(ksjs, r);
+    	
+    	// ONLINE PHASE
+    	List<BigInteger> ais = new ArrayList<BigInteger>(); // The set {a1,a2,...,ai}
+    	BigInteger x = null;
+    	
+    	// Get values from the client
+    	x = new BigInteger(s.read(), 10);
+    	for(int i = 0; i < ksjs.size(); i++){
+    		ais.add(new BigInteger(s.read(),10));
+    	}
+    	
+    	// Add in our secrets
+    	List<BigInteger> bis = new ArrayList<BigInteger>();
+    	for(BigInteger ai: ais){
+    		bis.add( ai.modPow(rs1, p) );
+    	}
+    	List<BigInteger> tsjs = new ArrayList<BigInteger>();
+    	for(BigInteger ksj : ksjs){
+    		//TODO: Should this be a different hash?
+    		// This is the following calculation all mod p
+    		// H(x^Rs * ksj )
+    		tsjs.add(hash( x.modPow(rs, p).multiply(ksj).mod(p) ));
+    	}
+    	
+    	// Send back to the client
+    	s.write(y.toString());
+    	for( BigInteger bi : bis ){
+    		s.write(bi.toString());
+    	}
+    	for( BigInteger tsj : tsjs ){
+    		s.write(tsj.toString());
+    	}
     	
     	
-		s.write("Server says hello: " + Math.random());
-		return s.read();
+		return "Server's result: " + s.read(); // threshold this value
     }
     
     

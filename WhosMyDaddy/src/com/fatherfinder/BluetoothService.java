@@ -30,8 +30,8 @@ import android.util.Log;
 
 //TODO: There is a crucial error if any bytes are send that are the message seperator
 //         This happens with some non zero probability when sending the hashed bytes directly
-//         To fix this at the moment we first convert all our BigIntegers to strings, but this may
-//         degrade performance. It would be better to think of another way.
+//         To fix this at the moment we first convert all our BigIntegers to strings, but this will
+//         degrade performance. It would be better to think of another way, perhaps sending lengths
 
 /**
  * This class does all the work for setting up and managing Bluetooth
