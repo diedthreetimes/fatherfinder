@@ -9,6 +9,8 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.spec.DSAPublicKeySpec;
 import java.security.spec.InvalidKeySpecException;
+import java.util.ArrayList;
+import java.util.List;
 
 import android.app.Service;
 import android.content.Intent;
@@ -29,6 +31,7 @@ import android.widget.Toast;
 
 // At the moment we use the built in BigInteger implementation to do our calculations.
 // TODO: Benchmark an openssl/gmp version
+// TODO: Benchmark byte[] vs strings for messaging
 public class PaternityTestService extends Service {
 	// Debugging
     private static final String TAG = "PaternityTestService";
@@ -38,6 +41,9 @@ public class PaternityTestService extends Service {
     public static final String SEPERATOR = ";;";
     public static final String START_TEST_MESSAGE = "START";
     public static final String ACK_START_MESSAGE = "ACK_START";
+    
+    // The number of allowed mismatches
+    private static final int ERROR_THRESHOLD = 0;
     
     //public/private keys
     private BigInteger p, q, g;
@@ -171,30 +177,55 @@ public class PaternityTestService extends Service {
     
     // Actually perform the test (these will be overides from a testing base class (and can be the same function)
     private String conductClientTest(BluetoothService s){
-    	// Compute any precomputation
+    	// OFFLINE PHASE
+    	BigInteger rc  = randomRange(q); // Secret 1
+    	BigInteger rc1 = randomRange(q); // Secret 2
     	
-    	// Generate the Secrets
+    	BigInteger x = g.modPow(rc, p);
     	
-    	//TODO: Unccoment this section and finish keygen bit
-    	//BigInteger rc  = randomRange(q);
-    	//BigInteger rc1 = randomRange(q);
+    	List<BigInteger> ais = new ArrayList<BigInteger>(); // The set {a1,a2,...,ai}
+    	for( String marker: getMarkerLengths() ){
+    		ais.add(hash(marker).modPow(rc1, p));
+    	}
+   
+    	// ONLINE PHASE
+    	s.write(x.toString());
+    	for( BigInteger ai : ais ){
+    		s.write(ai.toString());
+    	}
     	
-    	//Log.d(TAG, "RC: " + rc);
-    	//Log.d(TAG, "RC': " + rc1);
-    	//Log.d(TAG, "g: " + g);
-    	//Log.d(TAG, "q: " + q);
-    	//Log.d(TAG, "p: " + p);
+    	List<BigInteger> bis = new ArrayList<BigInteger>(); // The set {b1,b2,...,bi}
+    	List<BigInteger> tsjs = new ArrayList<BigInteger>(); // The set {ts1, ts2, ..., tsj}
+    	BigInteger y = null;
     	
-    	// Send info to server
-    	
-    	// Wait for server
+    	// Get values from the server
+    	y = new BigInteger(s.read(), 10);
+    	for(int i = 0; i < ais.size(); i++){
+    		bis.add(new BigInteger(s.read(),10));
+    	}
+    	for(int i = 0; i < ais.size(); i++){
+    		tsjs.add(new BigInteger(s.read(),10));
+    	}
     	
     	// Finish computation
     	
-    	// Send result
+    	List<BigInteger> tcis = new ArrayList<BigInteger>();
+    	for(int i = 0; i < ais.size(); i++){
+    		//TODO: Should this be a different hash?
+    		// This is the following calculation all mod p
+    		// H(y^Rc * bi^(1/Rc') )
+    		tcis.add(hash( y.modPow(rc, p).multiply( bis.get(i).modPow(rc1.modInverse(p), p) ) ));
+    	}
     	
-		s.write("Client says hello: " + g);
-		return s.read();
+    	// tcis = tcis ^ tcjs (intersection)
+    	tcis.retainAll(tsjs);
+    	
+    	int sharedLengths = tcis.size();
+    	
+    	// Send result
+    	s.write(String.valueOf(sharedLengths));
+    	
+		return String.valueOf(sharedLengths); //TODO: return a boolean based on ERROR_THRESHOLD
     }
     
     private String conductServerTest(BluetoothService s) {
@@ -216,9 +247,12 @@ public class PaternityTestService extends Service {
 	// q - the sub prime
 	// g - the base (generator)
 	private void loadSharedKeys(){
-		//TODO: Load these keys from a file
+		p = new BigInteger("b95b6c851ff243745411a0c901a14c217d429edba65b8a298534731e5c3182bf9806f592611bbf2ded9fc4a1b21acfe685112ec38d6d7c4b4bf28b5bcc636b6c4844fdcf449b002b4bc5143a32e0f7b713097b062683cc7cdaa7adfd6c49b0d897487d4e2d0c94bf0c8cafe11580cb84f14ca7922142503ee0dfc377591233c1", 16);
+		q = new BigInteger("d9ad24d2728323f368eac50bb1e1154483d820b7", 16);
+		g = new BigInteger("af3ecd5a39c2ec6fd3ebfd44a4e18a422429c3b18ec6a716968f0ea524f1e19a67f7e117211a802eaae551e4b43967b4b63a50ef6d2c31397a845456550eaa89d4fe8959e402e1484139e5ff52187882f25967ad10e294c7980dd678ebb2a592e031e75ada46d1c5af16caebcd86d06430de7e7ba6fb71590d7329ee744977dd", 16);
 		
-		// We probably won't use this, but here is a (rather long) way to generate them
+		//TODO: Load these keys from a file
+		// TODO: Find a way to generate them?
 		//TODO: Delete this, just used as a reference (DSA is not supported)
 		/*
 		KeyPairGenerator kpg;
@@ -243,30 +277,55 @@ public class PaternityTestService extends Service {
         */
         
 	}
+	
+	//TODO: Do H and H' need to be seperate hashes?
+	private BigInteger hash(byte [] input){
+		MessageDigest digest = null;
+		try {
+			digest = MessageDigest.getInstance("SHA-256");
+    	} catch (NoSuchAlgorithmException e1) {
+    		Log.e(TAG, "SHA-256 is not supported");
+    		return null; // TODO: Raise an error?
+    	}
+		digest.reset();
+    	    
+		return new BigInteger(digest.digest(input));
+	}
+	private BigInteger hash(String input){
+		return hash(input.getBytes());
+	}
+	private BigInteger hash(BigInteger input){
+		return hash(input.toByteArray());
+	}
     
-    //TODO: Finish implementing this in a way that is compatible with openssh
-    private byte [][] getMarkerLengths(){
+    private List<String> getMarkerLengths(){
     	//TODO: Implement Reading from SD (in an encyrpted fashion)
+    
     	int[] markerLengths = {1,2,3,4,5,6,7};
     	String[] markerNames = {"Mark1","SecondMarker","MarkNumber3","Mark4","Mark5","Mark6","Mark7"};
-    	byte[][] ret = null;
+    	List<String> ret = new ArrayList<String>();
     	
-    	for( String marker : markerNames ){
-    		MessageDigest digest = null;
-    	    try {
-    	        digest = MessageDigest.getInstance("SHA-256");
-    	    } catch (NoSuchAlgorithmException e1) {
-    	        Log.e(TAG, "SHA-256 is not supported");
-    	        return null; // TODO: Raise an error?
-    	    }
-    	    digest.reset();
-    	    
-    	    digest.digest(marker.getBytes());
-    	    
-    	    //Log.i("Eamorr",digest.digest(password.getBytes("UTF-8")).toString());
+    	for( int i = 0; i < markerLengths.length; i++ ){
+    		ret.add(markerNames[i].concat( String.valueOf(markerLengths[i]) ));
     	}
     	
-    	// First we hash the marker names
+    	//TODO: Why should we be hashing the marker names?
+//    	for( String marker : markerNames ){
+//    		MessageDigest digest = null;
+//    	    try {
+//    	        digest = MessageDigest.getInstance("SHA-256");
+//    	    } catch (NoSuchAlgorithmException e1) {
+//    	        Log.e(TAG, "SHA-256 is not supported");
+//    	        return null; // TODO: Raise an error?
+//    	    }
+//    	    digest.reset();
+//    	    
+//    	    ret.add(digest.digest(marker.getBytes()));
+//    	    
+//    	    //Log.i("Eamorr",digest.digest(password.getBytes("UTF-8")).toString());
+//    	}
+//    	
+    		
     	
     	return ret;
     }
