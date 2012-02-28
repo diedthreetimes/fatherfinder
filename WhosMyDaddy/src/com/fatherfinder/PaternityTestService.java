@@ -189,13 +189,13 @@ public class PaternityTestService extends Service {
     	
     	List<BigInteger> ais = new ArrayList<BigInteger>(); // The set {a1,a2,...,ai}
     	for( String marker: getMarkerLengths() ){
-    		ais.add(hash(marker).modPow(rc1, p));
+    		ais.add(hash(marker).mod(p).modPow(rc1, p));
     	}
    
     	// ONLINE PHASE
-    	s.write(x.toString());
+    	s.write(x.toString(16));
     	for( BigInteger ai : ais ){
-    		s.write(ai.toString());
+    		s.write(ai.toString(16));
     	}
     	
     	List<BigInteger> bis = new ArrayList<BigInteger>(); // The set {b1,b2,...,bi}
@@ -203,12 +203,12 @@ public class PaternityTestService extends Service {
     	BigInteger y = null;
     	
     	// Get values from the server
-    	y = new BigInteger(s.read(), 10);
+    	y = new BigInteger(s.read(), 16);
     	for(int i = 0; i < ais.size(); i++){
-    		bis.add(new BigInteger(s.read(),10));
+    		bis.add(new BigInteger(s.read(),16));
     	}
     	for(int i = 0; i < ais.size(); i++){
-    		tsjs.add(new BigInteger(s.read(),10));
+    		tsjs.add(new BigInteger(s.read(),16));
     	}
     	
     	// Finish computation
@@ -218,8 +218,14 @@ public class PaternityTestService extends Service {
     		//TODO: Should this be a different hash?
     		// This is the following calculation all mod p
     		// H(y^Rc * bi^(1/Rc') )
-    		tcis.add(hash( y.modPow(rc, p).multiply( bis.get(i).modPow(rc1.modInverse(p), p) ).mod(p) ));
+    		tcis.add(hash( y.modPow(rc, p).multiply( bis.get(i).modPow(rc1.modInverse(p), p) ) ).mod(p) );
     	}
+    	
+    	if(D) Log.d(TAG, "Client's first: " + tcis.get(0).toString());
+    	if(D) Log.d(TAG, "Client's second: " + tcis.get(1).toString());
+    	if(D) Log.d(TAG, "Server's first: " + tsjs.get(0).toString());
+    	if(D) Log.d(TAG, "Server's second: " + tsjs.get(1).toString());
+    	if(D) Log.d(TAG, "Server's third: "  + tsjs.get(2).toString());
     	
     	// tcis = tcis ^ tsjs (intersection)
     	tcis.retainAll(tsjs);
@@ -234,8 +240,7 @@ public class PaternityTestService extends Service {
     }
     
     private String conductServerTest(BluetoothService s) {
-    	//TODO: Why do we need two permutations?
-    	//TODO: should i only use one seeded secure random generator? probably
+    	//TODO: Unccoment shuffle and try and figure out why things are not intersecting correctly
     	// OFFLINE PHASE
     	BigInteger rs  = randomRange(q); // Secret 1
     	BigInteger rs1 = randomRange(q); // Secret 2
@@ -244,20 +249,20 @@ public class PaternityTestService extends Service {
     	
     	List<BigInteger> ksjs = new ArrayList<BigInteger>(); // The set {ks1,ks2,...,ksi}
     	for( String marker: getMarkerLengths() ){
-    		ksjs.add(hash(marker).modPow(rs1, p));
+    		ksjs.add(hash(marker).mod(p).modPow(rs1, p).mod(p));
     	}
     	
     	SecureRandom r = new SecureRandom();
-    	Collections.shuffle(ksjs, r);
+    	//TODO: Collections.shuffle(ksjs, r);
     	
     	// ONLINE PHASE
     	List<BigInteger> ais = new ArrayList<BigInteger>(); // The set {a1,a2,...,ai}
     	BigInteger x = null;
     	
     	// Get values from the client
-    	x = new BigInteger(s.read(), 10);
+    	x = new BigInteger(s.read(), 16);
     	for(int i = 0; i < ksjs.size(); i++){
-    		ais.add(new BigInteger(s.read(),10));
+    		ais.add(new BigInteger(s.read(),16));
     	}
     	
     	// Add in our secrets
@@ -265,21 +270,23 @@ public class PaternityTestService extends Service {
     	for(BigInteger ai: ais){
     		bis.add( ai.modPow(rs1, p) );
     	}
+    	//TODO: Collections.shuffle(bis, r);
+    	
     	List<BigInteger> tsjs = new ArrayList<BigInteger>();
     	for(BigInteger ksj : ksjs){
-    		//TODO: Should this be a different hash?
+    		//TODO: Should this be a different hash? Yes
     		// This is the following calculation all mod p
     		// H(x^Rs * ksj )
-    		tsjs.add(hash( x.modPow(rs, p).multiply(ksj).mod(p) ));
+    		tsjs.add(hash( x.modPow(rs, p).multiply(ksj).mod(p) ).mod(p));
     	}
     	
     	// Send back to the client
-    	s.write(y.toString());
+    	s.write(y.toString(16));
     	for( BigInteger bi : bis ){
-    		s.write(bi.toString());
+    		s.write(bi.toString(16));
     	}
     	for( BigInteger tsj : tsjs ){
-    		s.write(tsj.toString());
+    		s.write(tsj.toString(16));
     	}
     	
     	
@@ -299,32 +306,9 @@ public class PaternityTestService extends Service {
 		
 		//TODO: Load these keys from a file
 		// TODO: Find a way to generate them?
-		//TODO: Delete this, just used as a reference (DSA is not supported)
-		/*
-		KeyPairGenerator kpg;
-		try {
-			kpg = KeyPairGenerator.getInstance("DSA");
-			kpg.initialize(1024);
-			KeyPair kp = kpg.genKeyPair();
-
-			KeyFactory fact = KeyFactory.getInstance("DSA");
-			DSAPublicKeySpec pub = fact.getKeySpec(kp.getPublic(),
-					DSAPublicKeySpec.class);
-
-			p = pub.getP();
-			q = pub.getQ();
-			g = pub.getG();
-		} catch (NoSuchAlgorithmException e) {
-			//TODO: What do we do if Service creation fails?
-			Log.e(TAG, "DSA key generation is not supported!");
-		} catch (InvalidKeySpecException e) {
-			Log.e(TAG, "DSA key generation is not supported!");
-		}
-        */
-        
 	}
 	
-	//TODO: Do H and H' need to be seperate hashes?
+	//TODO: Do H and H' need to be seperate hashes? Yes, do this later using HMAC
 	private BigInteger hash(byte [] input){
 		MessageDigest digest = null;
 		try {
@@ -347,38 +331,25 @@ public class PaternityTestService extends Service {
     private List<String> getMarkerLengths(){
     	//TODO: Implement Reading from SD (in an encyrpted fashion)
     
-    	int[] markerLengths = {1,2,3,4,5,6,7};
-    	String[] markerNames = {"Mark1","SecondMarker","MarkNumber3","Mark4","Mark5","Mark6","Mark7"};
+    	int[] markerLengths = {1,2,3,4,5};
+    	String[] markerNames = {"Mark1","secondMarker","MarkNumber3", "Mark4", "Mark5"};
+    	//int[] markerLengths = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25};
+    	//markerLengths[1] = (int) (Math.random()*100.0);
+    	//String[] markerNames = {"Mark1","SecondMarker","MarkNumber3","Mark4","Mark5","Mark6","Mark7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25"};
     	List<String> ret = new ArrayList<String>();
     	
     	for( int i = 0; i < markerLengths.length; i++ ){
     		ret.add(markerNames[i].concat( String.valueOf(markerLengths[i]) ));
-    	}
-    	
-    	//TODO: Why should we be hashing the marker names?
-//    	for( String marker : markerNames ){
-//    		MessageDigest digest = null;
-//    	    try {
-//    	        digest = MessageDigest.getInstance("SHA-256");
-//    	    } catch (NoSuchAlgorithmException e1) {
-//    	        Log.e(TAG, "SHA-256 is not supported");
-//    	        return null; // TODO: Raise an error?
-//    	    }
-//    	    digest.reset();
-//    	    
-//    	    ret.add(digest.digest(marker.getBytes()));
-//    	    
-//    	    //Log.i("Eamorr",digest.digest(password.getBytes("UTF-8")).toString());
-//    	}
-//    	
-    		
+    	}	
     	
     	return ret;
     }
     
     // Calculate a random number between 0 and range
+    //TODO: We can't use securerandom for generating keys. THIS MUST BE CHANGED
     private BigInteger randomRange(BigInteger range){
     	//TODO: Is there anything else we should fall back on here perhaps openssl bn_range
+    	//         another option is using an AES based key generator (the only algorithim supported by android)
     	
     	// TODO: Should we be keeping this rand around? 
     	SecureRandom rand = new SecureRandom();

@@ -254,7 +254,6 @@ public class ConductTest extends Activity {
     private final Handler mHandler = new Handler() {
         @Override
         public void handleMessage(Message msg) {
-            if(D) Log.d(TAG, "We recieved a message: " + msg.what);
             switch (msg.what) {
             case   BluetoothService.MESSAGE_STATE_CHANGE:
                 if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
