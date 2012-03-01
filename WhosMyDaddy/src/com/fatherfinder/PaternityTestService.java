@@ -46,8 +46,11 @@ public class PaternityTestService extends Service {
     // The number of allowed mismatches
     private static final int ERROR_THRESHOLD = 0;
 	
-    //public/private keys
+    //public keys
     private BigInteger p, q, g;
+
+    // t = (p-1)/q to hash into the group Z*p
+    private BigInteger t;
     
 	/**
      * Class for clients to access.  Because we know this service always
@@ -167,7 +170,6 @@ public class PaternityTestService extends Service {
     			//TODO: Should we raise? yes
     		}
     		else if(read.equals(ACK_START_MESSAGE)) { //TODO: Should we look for which test was started as well?
-    			if(D) Log.d(TAG, "Client: Read succeeded");
     			s.write(ACK_START_MESSAGE);
     			break;
     		}
@@ -215,17 +217,11 @@ public class PaternityTestService extends Service {
     	
     	List<BigInteger> tcis = new ArrayList<BigInteger>();
     	for(int i = 0; i < ais.size(); i++){
-    		//TODO: Should this be a different hash?
+    		//TODO: Should this be a different hash? yes
     		// This is the following calculation all mod p
     		// H(y^Rc * bi^(1/Rc') )
-    		tcis.add(hash( y.modPow(rc, p).multiply( bis.get(i).modPow(rc1.modInverse(p), p) ) ).mod(p) );
+    		tcis.add(hash( y.modPow(rc, p).multiply(bis.get(i).modPow(rc1.modInverse(q), p)).mod(p) ) );
     	}
-    	
-    	if(D) Log.d(TAG, "Client's first: " + tcis.get(0).toString());
-    	if(D) Log.d(TAG, "Client's second: " + tcis.get(1).toString());
-    	if(D) Log.d(TAG, "Server's first: " + tsjs.get(0).toString());
-    	if(D) Log.d(TAG, "Server's second: " + tsjs.get(1).toString());
-    	if(D) Log.d(TAG, "Server's third: "  + tsjs.get(2).toString());
     	
     	// tcis = tcis ^ tsjs (intersection)
     	tcis.retainAll(tsjs);
@@ -240,20 +236,20 @@ public class PaternityTestService extends Service {
     }
     
     private String conductServerTest(BluetoothService s) {
-    	//TODO: Unccoment shuffle and try and figure out why things are not intersecting correctly
+    	//TODO: Uncomment shuffle
     	// OFFLINE PHASE
     	BigInteger rs  = randomRange(q); // Secret 1
     	BigInteger rs1 = randomRange(q); // Secret 2
-    	
+    	    	
     	BigInteger y = g.modPow(rs, p);
     	
     	List<BigInteger> ksjs = new ArrayList<BigInteger>(); // The set {ks1,ks2,...,ksi}
     	for( String marker: getMarkerLengths() ){
-    		ksjs.add(hash(marker).mod(p).modPow(rs1, p).mod(p));
+    		ksjs.add(hash(marker).modPow(rs1, p));
     	}
     	
     	SecureRandom r = new SecureRandom();
-    	//TODO: Collections.shuffle(ksjs, r);
+    	//Collections.shuffle(ksjs, r);
     	
     	// ONLINE PHASE
     	List<BigInteger> ais = new ArrayList<BigInteger>(); // The set {a1,a2,...,ai}
@@ -270,14 +266,14 @@ public class PaternityTestService extends Service {
     	for(BigInteger ai: ais){
     		bis.add( ai.modPow(rs1, p) );
     	}
-    	//TODO: Collections.shuffle(bis, r);
+    	//Collections.shuffle(bis, r);
     	
     	List<BigInteger> tsjs = new ArrayList<BigInteger>();
     	for(BigInteger ksj : ksjs){
     		//TODO: Should this be a different hash? Yes
     		// This is the following calculation all mod p
     		// H(x^Rs * ksj )
-    		tsjs.add(hash( x.modPow(rs, p).multiply(ksj).mod(p) ).mod(p));
+    		tsjs.add(hash( x.modPow(rs, p).multiply(ksj).mod(p) ));
     	}
     	
     	// Send back to the client
@@ -303,9 +299,15 @@ public class PaternityTestService extends Service {
 		p = new BigInteger("b95b6c851ff243745411a0c901a14c217d429edba65b8a298534731e5c3182bf9806f592611bbf2ded9fc4a1b21acfe685112ec38d6d7c4b4bf28b5bcc636b6c4844fdcf449b002b4bc5143a32e0f7b713097b062683cc7cdaa7adfd6c49b0d897487d4e2d0c94bf0c8cafe11580cb84f14ca7922142503ee0dfc377591233c1", 16);
 		q = new BigInteger("d9ad24d2728323f368eac50bb1e1154483d820b7", 16);
 		g = new BigInteger("af3ecd5a39c2ec6fd3ebfd44a4e18a422429c3b18ec6a716968f0ea524f1e19a67f7e117211a802eaae551e4b43967b4b63a50ef6d2c31397a845456550eaa89d4fe8959e402e1484139e5ff52187882f25967ad10e294c7980dd678ebb2a592e031e75ada46d1c5af16caebcd86d06430de7e7ba6fb71590d7329ee744977dd", 16);
-		
+	
 		//TODO: Load these keys from a file
 		// TODO: Find a way to generate them?
+		
+		if(D) Log.d(TAG, "P: " + p);
+		if(D) Log.d(TAG, "q: " + q);
+		if(D) Log.d(TAG, "g: " + g);
+		
+		t = (p.subtract(BigInteger.ONE).divide(q));
 	}
 	
 	//TODO: Do H and H' need to be seperate hashes? Yes, do this later using HMAC
@@ -319,7 +321,7 @@ public class PaternityTestService extends Service {
     	}
 		digest.reset();
     	    
-		return new BigInteger(digest.digest(input));
+		return new BigInteger(digest.digest(input)).mod(p).modPow(t, p);
 	}
 	private BigInteger hash(String input){
 		return hash(input.getBytes());
@@ -345,7 +347,7 @@ public class PaternityTestService extends Service {
     	return ret;
     }
     
-    // Calculate a random number between 0 and range
+    // Calculate a random number between 0 and range (exclusive)
     //TODO: We can't use securerandom for generating keys. THIS MUST BE CHANGED
     private BigInteger randomRange(BigInteger range){
     	//TODO: Is there anything else we should fall back on here perhaps openssl bn_range
@@ -354,8 +356,9 @@ public class PaternityTestService extends Service {
     	// TODO: Should we be keeping this rand around? 
     	SecureRandom rand = new SecureRandom();
     	BigInteger temp = new BigInteger(range.bitLength(), rand);
-    	while(temp.compareTo(range) > 0)
+    	while(temp.compareTo(range) >= 0 || temp.equals(BigInteger.ZERO)){
     		temp = new BigInteger(range.bitLength(), rand);
+    	}
     	return temp;
     	
     }
