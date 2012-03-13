@@ -204,6 +204,9 @@ public class PaternityTestService extends Service {
     	// ONLINE PHASE
     	stopwatch.start();
     	
+    	
+    	// This code has been pipelined (see note in server code)
+    	
     	s.write(x.toString(16));
     	for( BigInteger ai : ais ){
     		s.write(ai.toString(16));
@@ -213,23 +216,20 @@ public class PaternityTestService extends Service {
     	List<BigInteger> tsjs = new ArrayList<BigInteger>(); // The set {ts1, ts2, ..., tsj}
     	BigInteger y = null;
     	
-    	// Get values from the server
+    	// Get values from the server and process immediately 
     	y = new BigInteger(s.read(), 16);
+    	List<BigInteger> tcis = new ArrayList<BigInteger>(); //Will store the clients set
     	for(int i = 0; i < ais.size(); i++){
     		bis.add(new BigInteger(s.read(),16));
-    	}
-    	for(int i = 0; i < ais.size(); i++){
-    		tsjs.add(new BigInteger(s.read(),16));
-    	}
-    	
-    	// Finish computation
-    	
-    	List<BigInteger> tcis = new ArrayList<BigInteger>();
-    	for(int i = 0; i < ais.size(); i++){
+    		
     		//TODO: Should this be a different hash? yes
     		// This is the following calculation all mod p
     		// H(y^Rc * bi^(1/Rc') )
     		tcis.add(hash( y.modPow(rc, p).multiply(bis.get(i).modPow(rc1.modInverse(q), p)).mod(p) ) );
+    	}
+    	
+    	for(int i = 0; i < ais.size(); i++){
+    		tsjs.add(new BigInteger(s.read(),16));
     	}
     	
     	// tcis = tcis ^ tsjs (intersection)
@@ -272,18 +272,25 @@ public class PaternityTestService extends Service {
     	List<BigInteger> ais = new ArrayList<BigInteger>(); // The set {a1,a2,...,ai}
     	BigInteger x = null;
     	
-    	// Get values from the client
-    	x = new BigInteger(s.read(), 16);
-    	for(int i = 0; i < ksjs.size(); i++){
-    		ais.add(new BigInteger(s.read(),16));
-    	}
+    	// This code has been reworked to be pipelined. The idea being, we start computation immediately 
+    	//   after we receive the clients data. 
     	
-    	// Add in our secrets
-    	List<BigInteger> bis = new ArrayList<BigInteger>();
-    	for(BigInteger ai: ais){
-    		bis.add( ai.modPow(rs1, p) );
+    	// Start reading client data
+    	x = new BigInteger(s.read(), 16);
+    	
+    	List<BigInteger> bis = new ArrayList<BigInteger>(); // will store client data before shuffling
+    	
+    	for(int i = 0; i < ksjs.size(); i++){
+    		// Read an ai
+    		ais.add(new BigInteger(s.read(),16));
+    		
+    		// Add our secret
+    		bis.add( ais.get(i).modPow(rs1, p) );
     	}
     	Collections.shuffle(bis, r);
+    	
+    	// We should send immediately so client can start processing, but that would be an added difference from the
+    	//   original implementation, and is done in a later branch.
     	
     	List<BigInteger> tsjs = new ArrayList<BigInteger>();
     	for(BigInteger ksj : ksjs){
