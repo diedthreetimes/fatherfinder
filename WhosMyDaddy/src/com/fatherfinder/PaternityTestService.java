@@ -52,6 +52,8 @@ public class PaternityTestService extends Service {
     // t = (p-1)/q to hash into the group Z*p
     private BigInteger t;
     
+    private StopWatch stopwatch;
+    
 	/**
      * Class for clients to access.  Because we know this service always
      * runs in the same process as its clients, we don't need to deal with
@@ -66,6 +68,7 @@ public class PaternityTestService extends Service {
     @Override
     public void onCreate(){
     	loadSharedKeys();
+    	stopwatch = new StopWatch();
     }
     
     @Override //TODO: do we need this? I don't think so since we only allow binding to the service
@@ -184,6 +187,7 @@ public class PaternityTestService extends Service {
     // Actually perform the test (these will be overides from a testing base class (and can be the same function)
     private String conductClientTest(BluetoothService s){
     	// OFFLINE PHASE
+    	stopwatch.start();
     	BigInteger rc  = randomRange(q); // Secret 1
     	BigInteger rc1 = randomRange(q); // Secret 2
     	
@@ -194,7 +198,12 @@ public class PaternityTestService extends Service {
     		ais.add(hash(marker).mod(p).modPow(rc1, p));
     	}
    
+    	stopwatch.stop();
+    	Log.i(TAG, "Client offline phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
+    	
     	// ONLINE PHASE
+    	stopwatch.start();
+    	
     	s.write(x.toString(16));
     	for( BigInteger ai : ais ){
     		s.write(ai.toString(16));
@@ -232,12 +241,15 @@ public class PaternityTestService extends Service {
     	if(D) Log.d(TAG, "Client calculated: " + String.valueOf(sharedLengths));
     	s.write(String.valueOf(sharedLengths));
     	
+    	stopwatch.stop();
+        Log.i(TAG, "Client online phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
+    	
 		return String.valueOf(sharedLengths); //TODO: return a boolean based on ERROR_THRESHOLD
     }
     
     private String conductServerTest(BluetoothService s) {
-    	//TODO: Uncomment shuffle
     	// OFFLINE PHASE
+    	stopwatch.start();
     	BigInteger rs  = randomRange(q); // Secret 1
     	BigInteger rs1 = randomRange(q); // Secret 2
     	    	
@@ -249,9 +261,14 @@ public class PaternityTestService extends Service {
     	}
     	
     	SecureRandom r = new SecureRandom();
-    	//Collections.shuffle(ksjs, r);
+    	Collections.shuffle(ksjs, r);
+    	
+    	stopwatch.stop();
+    	Log.i(TAG, "Server offline phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
     	
     	// ONLINE PHASE
+    	stopwatch.start();
+    	
     	List<BigInteger> ais = new ArrayList<BigInteger>(); // The set {a1,a2,...,ai}
     	BigInteger x = null;
     	
@@ -266,7 +283,7 @@ public class PaternityTestService extends Service {
     	for(BigInteger ai: ais){
     		bis.add( ai.modPow(rs1, p) );
     	}
-    	//Collections.shuffle(bis, r);
+    	Collections.shuffle(bis, r);
     	
     	List<BigInteger> tsjs = new ArrayList<BigInteger>();
     	for(BigInteger ksj : ksjs){
@@ -285,6 +302,8 @@ public class PaternityTestService extends Service {
     		s.write(tsj.toString(16));
     	}
     	
+    	stopwatch.stop();
+        Log.i(TAG, "Server online phase completed in " + stopwatch.getElapsedTime()+ " miliseconds.");
     	
 		return "Server's result: " + s.read(); // threshold this value
     }
@@ -333,11 +352,11 @@ public class PaternityTestService extends Service {
     private List<String> getMarkerLengths(){
     	//TODO: Implement Reading from SD (in an encyrpted fashion)
     
-    	int[] markerLengths = {1,2,3,4,5};
-    	String[] markerNames = {"Mark1","secondMarker","MarkNumber3", "Mark4", "Mark5"};
-    	//int[] markerLengths = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25};
-    	//markerLengths[1] = (int) (Math.random()*100.0);
-    	//String[] markerNames = {"Mark1","SecondMarker","MarkNumber3","Mark4","Mark5","Mark6","Mark7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25"};
+    	//int[] markerLengths = {1,2,3,4,5};
+    	//String[] markerNames = {"Mark1","secondMarker","MarkNumber3", "Mark4", "Mark5"};
+    	int[] markerLengths = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25};
+    	markerLengths[1] = (int) (Math.random()*100.0);
+    	String[] markerNames = {"Mark1","SecondMarker","MarkNumber3","Mark4","Mark5","Mark6","Mark7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25"};
     	List<String> ret = new ArrayList<String>();
     	
     	for( int i = 0; i < markerLengths.length; i++ ){

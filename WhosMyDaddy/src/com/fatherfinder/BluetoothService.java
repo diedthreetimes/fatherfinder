@@ -10,6 +10,7 @@ package com.fatherfinder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -563,7 +564,12 @@ public class BluetoothService {
 
 		public void run() {
             Log.i(TAG, "BEGIN mConnectedThread");
-            byte[] buffer = new byte[1024]; //TODO: Investigate this being the maximum buffer size. Make sure all message sizes are allowed
+            byte[] buffer = new byte[9999]; 
+            //TODO: Investigate this being the maximum buffer size. Make sure all message sizes are allowed
+            //      Not all messages are allowed, only MAX_BUFFER bytes are read, thus larger messages
+            //      Or multiple messages read all at once may get split up.
+            //      A possible fix is to searilize data, watch for the seperator character, or just send the
+            //      message length first. Potentially look at http://code.google.com/p/protobuf/
             int bytes;
 
             // Keep listening to the InputStream while connected
@@ -596,7 +602,8 @@ public class BluetoothService {
         	}
         }
     
-
+		//TODO: Cleanup only the read/write methods we want to support
+		
         /**
          * Write to the connected OutStream.
          * @param buffer  The bytes to write
