@@ -1,0 +1,6 @@
+
+
+# Benchmarking
+Run the protocol on two phones, while attached to LOGCat. Look for timing messages printed from the (Paternity)Test tag.
+
+There should be two timings one for preprocess, one for online.
