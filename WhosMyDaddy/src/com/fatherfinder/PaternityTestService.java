@@ -195,7 +195,7 @@ public class PaternityTestService extends Service {
     	
     	List<BigInteger> ais = new ArrayList<BigInteger>(); // The set {a1,a2,...,ai}
     	for( String marker: getMarkerLengths() ){
-    		ais.add(hash(marker).mod(p).modPow(rc1, p));
+    		ais.add(hash(marker).modPow(rc1, p));
     	}
    
     	stopwatch.stop();
@@ -289,8 +289,11 @@ public class PaternityTestService extends Service {
     	}
     	Collections.shuffle(bis, r);
     	
-    	// We should send immediately so client can start processing, but that would be an added difference from the
-    	//   original implementation, and is done in a later branch.
+    	// Send back to the client
+    	s.write(y.toString(16));
+    	for( BigInteger bi : bis ){
+    		s.write(bi.toString(16));
+    	}
     	
     	List<BigInteger> tsjs = new ArrayList<BigInteger>();
     	for(BigInteger ksj : ksjs){
@@ -300,11 +303,6 @@ public class PaternityTestService extends Service {
     		tsjs.add(hash( x.modPow(rs, p).multiply(ksj).mod(p) ));
     	}
     	
-    	// Send back to the client
-    	s.write(y.toString(16));
-    	for( BigInteger bi : bis ){
-    		s.write(bi.toString(16));
-    	}
     	for( BigInteger tsj : tsjs ){
     		s.write(tsj.toString(16));
     	}
@@ -337,23 +335,26 @@ public class PaternityTestService extends Service {
 	}
 	
 	//TODO: Do H and H' need to be seperate hashes? Yes, do this later using HMAC
-	private BigInteger hash(byte [] input){
+	private BigInteger hash(byte [] input, byte selector){
 		MessageDigest digest = null;
 		try {
-			digest = MessageDigest.getInstance("SHA-256");
+			digest = MessageDigest.getInstance("SHA-1");
     	} catch (NoSuchAlgorithmException e1) {
-    		Log.e(TAG, "SHA-256 is not supported");
+    		Log.e(TAG, "SHA-1 is not supported");
     		return null; // TODO: Raise an error?
     	}
 		digest.reset();
     	    
-		return new BigInteger(digest.digest(input)).mod(p).modPow(t, p);
+		return new BigInteger(digest.digest(input));
 	}
+	
+	// H, as in the PCI-C protocol. Here the input is a string, and the output is an element in Z*p
 	private BigInteger hash(String input){
-		return hash(input.getBytes());
+		return hash(input.getBytes(), (byte)0).mod(p).modPow(t, p);
 	}
+	// H', as in the PCI-C protocol. The input is an integer, and the output is any <160 bit integer
 	private BigInteger hash(BigInteger input){
-		return hash(input.toByteArray());
+		return hash(input.toByteArray(), (byte)1);
 	}
     
     private List<String> getMarkerLengths(){
