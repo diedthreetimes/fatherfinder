@@ -189,7 +189,7 @@ public class ConductTest extends Activity {
      * @param asClient Flag indicating if the test is conducted as client or server
      */
     // This will fire off the desired test service and connect it to the chosen device
-    //TODO: Investigate the possibility of DoS since multiple tests will be conducted at the same time
+    //TODO: Investigate bugs that may occur from two tests running at the same time.
     //         a possible fix could be to check if a test is already running, since they use the same bluetooth connection
     //         this could be done in the handler
     private void doTest(String test, boolean asClient) {
@@ -197,6 +197,7 @@ public class ConductTest extends Activity {
     	// TODO: Switch on test & make the values constants
     	// TODO: Make less bluetooth specific perhaps by housing connection information inside
     	//       of the service
+    	
         // Check that we're actually connected before trying anything
         if (mMessageSerivce.getState() != BluetoothService.STATE_CONNECTED) {
             Toast.makeText(this, R.string.not_connected, Toast.LENGTH_SHORT).show();
@@ -218,7 +219,7 @@ public class ConductTest extends Activity {
     /**
      * Displays the results of the test
      */
-    //TODO: Just make this a boolean at some point
+    //TODO: Make this also include a boolean indicating test success or failure. 
     private void displayResult(String m) {
     	if(m == null)
     		mMessageLogArrayAdapter.add("Something went wrong. Try again");//TODO: something went wrong tell the user (use a resource string)
@@ -233,13 +234,10 @@ public class ConductTest extends Activity {
     	
     }
 
-    
-    // This handler and associated methods handles displaying information of a connected device to the user
-    // TODO: see if this is actually necessary
     // Name of the connected device
     private String mConnectedDeviceName = null;
     
-    // ActionBar is a 3.0 thing, will have to find another way if this functionality is desired TODO: remove cruft
+    // ActionBar is a 3.0 thing, will have to find another way if this functionality is desired TODO: test on 4.0
     //private final void setStatus(int resId) {
         //final ActionBar actionBar = getActionBar();
         //actionBar.setSubtitle(resId);
