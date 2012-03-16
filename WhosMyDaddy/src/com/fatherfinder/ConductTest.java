@@ -53,7 +53,6 @@ public class ConductTest extends Activity {
     
     // Intent request codes
     private static final int REQUEST_CONNECT_DEVICE_SECURE = 1;
-    //private static final int REQUEST_CONNECT_DEVICE_INSECURE = 2;
     private static final int REQUEST_ENABLE_BT = 3; //TODO: Refactor this out
     
     // Types of tests
@@ -308,12 +307,6 @@ public class ConductTest extends Activity {
                 connectDevice(data, true);
             }
             break;
-//        case REQUEST_CONNECT_DEVICE_INSECURE:
-//            // When DeviceListActivity returns with a device to connect
-//            if (resultCode == Activity.RESULT_OK) {
-//                connectDevice(data, false);
-//            }
-//            break;
         case REQUEST_ENABLE_BT:
             // When the request to enable Bluetooth returns
             if (resultCode == Activity.RESULT_OK) {
@@ -344,12 +337,6 @@ public class ConductTest extends Activity {
             serverIntent = new Intent(this, DeviceList.class);
             startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
             return true;
-// TODO: Toast unimplemented (or remove)
-//        case R.id.insecure_connect_scan:
-//            // Launch the DeviceListActivity to see devices and do scan
-//            serverIntent = new Intent(this, DeviceListActivity.class);
-//            startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_INSECURE);
-//            return true;
         case R.id.discoverable:
             // Ensure this device is discoverable by others
             ensureDiscoverable();
