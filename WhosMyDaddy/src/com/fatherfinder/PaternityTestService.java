@@ -1,14 +1,9 @@
 package com.fatherfinder;
 
 import java.math.BigInteger;
-import java.security.KeyFactory;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
-import java.security.spec.DSAPublicKeySpec;
-import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -16,11 +11,8 @@ import java.util.List;
 import android.app.Service;
 import android.content.Intent;
 import android.os.Binder;
-import android.os.Handler;
 import android.os.IBinder;
-import android.os.Message;
 import android.util.Log;
-import android.widget.Toast;
 
 /**
  * This class does all the work for conducting the secure communication
@@ -334,8 +326,13 @@ public class PaternityTestService extends Service {
 		t = (p.subtract(BigInteger.ONE).divide(q));
 	}
 	
-	//TODO: Do H and H' need to be seperate hashes? Yes, do this later using HMAC
-	private BigInteger hash(byte [] input, byte selector){
+	private BigInteger hash(byte [] message, byte selector){
+		
+		// input = selector | message
+		byte [] input = new byte[message.length + 1];
+		System.arraycopy(message, 0, input, 1, message.length);
+		input[0] = selector;
+		
 		MessageDigest digest = null;
 		try {
 			digest = MessageDigest.getInstance("SHA-1");
