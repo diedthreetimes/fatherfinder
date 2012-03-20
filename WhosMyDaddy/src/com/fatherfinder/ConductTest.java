@@ -20,7 +20,6 @@ import android.view.View.OnClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 /*
@@ -277,6 +276,8 @@ public class ConductTest extends Activity {
                 if(D) Log.d(TAG, "Received the message: " + readMessage);
                 
                 String[] parsed_message = readMessage.split(PaternityTestService.SEPERATOR);
+                
+                // TODO: look at this
                 
                 if(parsed_message.length > 1 && parsed_message[0].equals(PaternityTestService.START_TEST_MESSAGE)) //TODO: refactor for arbitrary tests
                 	doTest(parsed_message[1], false);

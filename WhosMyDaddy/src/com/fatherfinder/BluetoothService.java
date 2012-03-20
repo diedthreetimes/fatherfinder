@@ -10,11 +10,6 @@ package com.fatherfinder;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -531,7 +526,7 @@ public class BluetoothService {
 		public String read() {
 			// read should not be used if packets are being read directly off the wire
 			if(mForwardRead){
-				return null;
+				return null; //TODO: Raise here?
 			}
 			
 			try {
@@ -578,7 +573,8 @@ public class BluetoothService {
             		// Read from the InputStream
             		bytes = mmInStream.read(buffer);	                    
 	                    
-            		// Trim off the seperator
+            		// Trim off the seperator 
+            		//TODO: This shouldn't be here, instead use a buffer that waits for a complete message
             		bytes = bytes - MESSAGE_SEPERATOR.getBytes().length;
 	                    
             		//if(D) Log.d(TAG, "We've recieved a read: " + (new String(buffer,0,bytes)));

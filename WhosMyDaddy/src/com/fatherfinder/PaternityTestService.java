@@ -37,6 +37,7 @@ public class PaternityTestService extends Service {
     
     // The number of allowed mismatches
     private static final int ERROR_THRESHOLD = 0;
+    private static final int BIGINT_ENCODING = 16; //TODO: Investigate why 64 fails
 	
     //public keys
     private BigInteger p, q, g;
@@ -199,29 +200,25 @@ public class PaternityTestService extends Service {
     	
     	// This code has been pipelined (see note in server code)
     	
-    	s.write(x.toString(16));
+    	s.write(x.toString(BIGINT_ENCODING));
     	for( BigInteger ai : ais ){
-    		s.write(ai.toString(16));
+    		s.write(ai.toString(BIGINT_ENCODING));
     	}
-    	
-    	List<BigInteger> bis = new ArrayList<BigInteger>(); // The set {b1,b2,...,bi}
+    
     	List<BigInteger> tsjs = new ArrayList<BigInteger>(); // The set {ts1, ts2, ..., tsj}
+    	List<BigInteger> tcis = new ArrayList<BigInteger>(); //Will store the clients processed set
     	BigInteger y = null;
     	
     	// Get values from the server and process immediately 
-    	y = new BigInteger(s.read(), 16);
-    	List<BigInteger> tcis = new ArrayList<BigInteger>(); //Will store the clients set
+    	y = new BigInteger(s.read(), BIGINT_ENCODING);
     	for(int i = 0; i < ais.size(); i++){
-    		bis.add(new BigInteger(s.read(),16));
-    		
-    		//TODO: Should this be a different hash? yes
     		// This is the following calculation all mod p
     		// H(y^Rc * bi^(1/Rc') )
-    		tcis.add(hash( y.modPow(rc, p).multiply(bis.get(i).modPow(rc1.modInverse(q), p)).mod(p) ) );
+    		tcis.add(hash( y.modPow(rc, p).multiply((new BigInteger(s.read(),BIGINT_ENCODING)).modPow(rc1.modInverse(q), p)).mod(p) ) );
     	}
     	
     	for(int i = 0; i < ais.size(); i++){
-    		tsjs.add(new BigInteger(s.read(),16));
+    		tsjs.add(new BigInteger(s.read(),BIGINT_ENCODING));
     	}
     	
     	// tcis = tcis ^ tsjs (intersection)
@@ -268,13 +265,13 @@ public class PaternityTestService extends Service {
     	//   after we receive the clients data. 
     	
     	// Start reading client data
-    	x = new BigInteger(s.read(), 16);
+    	x = new BigInteger(s.read(), BIGINT_ENCODING);
     	
     	List<BigInteger> bis = new ArrayList<BigInteger>(); // will store client data before shuffling
     	
     	for(int i = 0; i < ksjs.size(); i++){
     		// Read an ai
-    		ais.add(new BigInteger(s.read(),16));
+    		ais.add(new BigInteger(s.read(),BIGINT_ENCODING));
     		
     		// Add our secret
     		bis.add( ais.get(i).modPow(rs1, p) );
@@ -282,9 +279,9 @@ public class PaternityTestService extends Service {
     	Collections.shuffle(bis, r);
     	
     	// Send back to the client
-    	s.write(y.toString(16));
+    	s.write(y.toString(BIGINT_ENCODING));
     	for( BigInteger bi : bis ){
-    		s.write(bi.toString(16));
+    		s.write(bi.toString(BIGINT_ENCODING));
     	}
     	
     	List<BigInteger> tsjs = new ArrayList<BigInteger>();
@@ -296,7 +293,7 @@ public class PaternityTestService extends Service {
     	}
     	
     	for( BigInteger tsj : tsjs ){
-    		s.write(tsj.toString(16));
+    		s.write(tsj.toString(BIGINT_ENCODING));
     	}
     	
     	stopwatch.stop();
