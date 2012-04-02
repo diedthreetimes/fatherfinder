@@ -242,7 +242,7 @@ public class BluetoothService {
      * @return the bytes read
      * @see ConnectedThread#read()
      */
-    public String read() {
+    public byte [] read() {
         // Create temporary object
         ConnectedThread r;
         // Synchronize a copy of the ConnectedThread
@@ -252,11 +252,19 @@ public class BluetoothService {
         }
         
         // Perform the read unsynchronized and parse
-        String readMessage = r.read();
+        byte[] readMessage = r.read();
         
-        if(D) Log.d(TAG, "Read: " + readMessage);
+        if(D) Log.d(TAG, "Read: " + new String(readMessage));
         return readMessage;
     }
+    
+    /**
+     * Read a string from Connected Thread
+     * @see #read()
+     */
+	public String readString() {
+		return new String(read());
+	}
     
     /**
      * Sets the readLoop flag to signify the behavior of socket reads
@@ -468,19 +476,18 @@ public class BluetoothService {
      * It handles all incoming and outgoing transmissions.
      */
     private class ConnectedThread extends Thread {
-        private static final int MAX_MESSAGE_SIZE  = 256;
 		private final BluetoothSocket mmSocket;
         private final DataInputStream mmInStream;
         private final DataOutputStream mmOutStream;
         private boolean mForwardRead = true;
-        private BlockingQueue<String> mMessageBuffer;
+        private BlockingQueue<byte []> mMessageBuffer;
         	
         public ConnectedThread(BluetoothSocket socket, String socketType) {
             Log.d(TAG, "create ConnectedThread: " + socketType);
             mmSocket = socket;
             DataInputStream tmpIn = null;
             DataOutputStream tmpOut = null;
-            mMessageBuffer = new LinkedBlockingQueue<String>(); // TODO: add a capacity here to prevent doS
+            mMessageBuffer = new LinkedBlockingQueue<byte []>(); // TODO: add a capacity here to prevent doS
             
             // Get the BluetoothSocket input and output streams
             try {
@@ -520,7 +527,7 @@ public class BluetoothService {
          * @return the bytes read
          * @see ConnectedThread#read()
          */
-		public String read() {
+		public byte[] read() {
 			// read should not be used if packets are being read directly off the wire
 			if(mForwardRead){
 				return null; //TODO: Raise here?
@@ -553,7 +560,6 @@ public class BluetoothService {
 
 		public void run() {
             Log.i(TAG, "BEGIN mConnectedThread");
-            byte[] buffer = new byte[MAX_MESSAGE_SIZE]; 
             
             int bytes;
 			
@@ -562,6 +568,8 @@ public class BluetoothService {
             	try {
             		// Read from the InputStream
             		bytes = mmInStream.readInt();	
+            		byte[] buffer = new byte[bytes]; // TODO: This is a little dangerous	
+            		
             		mmInStream.readFully(buffer, 0, bytes);
             		
                     if(mForwardRead) {
@@ -569,10 +577,9 @@ public class BluetoothService {
 	                            .sendToTarget();
                     }
                     else {
-                    	String message = new String(buffer,0,bytes);
-			    	    if(D) Log.d(TAG, "Adding to the queue: " + message);
 			    	    try {
-							mMessageBuffer.put(message);
+			    	    	
+							mMessageBuffer.put(buffer);
 						} catch (InterruptedException e) {
 							Log.e(TAG, "Message add interupted.");
 							//TODO: possibly throw here

@@ -24,7 +24,6 @@ import android.util.Log;
 
 // At the moment we use the built in BigInteger implementation to do our calculations.
 // TODO: Benchmark an openssl/gmp version
-// TODO: Benchmark byte[] vs strings for messaging
 public class PaternityTestService extends Service {
 	// Debugging
     private static final String TAG = "PaternityTestService";
@@ -37,7 +36,6 @@ public class PaternityTestService extends Service {
     
     // The number of allowed mismatches
     private static final int ERROR_THRESHOLD = 0;
-    private static final int BIGINT_ENCODING = 16; //TODO: Investigate why 64 fails
 	
     //public keys
     private BigInteger p, q, g;
@@ -132,7 +130,7 @@ public class PaternityTestService extends Service {
 		String read;
 		
 		while(true) {
-			read = s.read();
+			read = s.readString();
 			if(read == null){
 				if(D) Log.d(TAG, "Server: Read failed");
 				//TODO: Should we raise? yes
@@ -160,7 +158,7 @@ public class PaternityTestService extends Service {
     	if(D) Log.d(TAG, "Client is listening");
 
     	while(true){
-    		String read = s.read();
+    		String read = s.readString();
     		if(read == null){
     			if(D) Log.d(TAG, "Client: Read failed");
     			//TODO: Should we raise? yes
@@ -200,9 +198,9 @@ public class PaternityTestService extends Service {
     	
     	// This code has been pipelined (see note in server code)
     	
-    	s.write(x.toString(BIGINT_ENCODING));
+    	s.write(x.toByteArray());
     	for( BigInteger ai : ais ){
-    		s.write(ai.toString(BIGINT_ENCODING));
+    		s.write(ai.toByteArray());
     	}
     
     	List<BigInteger> tsjs = new ArrayList<BigInteger>(); // The set {ts1, ts2, ..., tsj}
@@ -210,15 +208,15 @@ public class PaternityTestService extends Service {
     	BigInteger y = null;
     	
     	// Get values from the server and process immediately 
-    	y = new BigInteger(s.read(), BIGINT_ENCODING);
+    	y = new BigInteger(s.read());
     	for(int i = 0; i < ais.size(); i++){
     		// This is the following calculation all mod p
     		// H(y^Rc * bi^(1/Rc') )
-    		tcis.add(hash( y.modPow(rc, p).multiply((new BigInteger(s.read(),BIGINT_ENCODING)).modPow(rc1.modInverse(q), p)).mod(p) ) );
+    		tcis.add(hash( y.modPow(rc, p).multiply((new BigInteger(s.read())).modPow(rc1.modInverse(q), p)).mod(p) ) );
     	}
     	
     	for(int i = 0; i < ais.size(); i++){
-    		tsjs.add(new BigInteger(s.read(),BIGINT_ENCODING));
+    		tsjs.add(new BigInteger(s.read()));
     	}
     	
     	// tcis = tcis ^ tsjs (intersection)
@@ -265,13 +263,13 @@ public class PaternityTestService extends Service {
     	//   after we receive the clients data. 
     	
     	// Start reading client data
-    	x = new BigInteger(s.read(), BIGINT_ENCODING);
+    	x = new BigInteger(s.read());
     	
     	List<BigInteger> bis = new ArrayList<BigInteger>(); // will store client data before shuffling
     	
     	for(int i = 0; i < ksjs.size(); i++){
     		// Read an ai
-    		ais.add(new BigInteger(s.read(),BIGINT_ENCODING));
+    		ais.add(new BigInteger(s.read()));
     		
     		// Add our secret
     		bis.add( ais.get(i).modPow(rs1, p) );
@@ -279,9 +277,9 @@ public class PaternityTestService extends Service {
     	Collections.shuffle(bis, r);
     	
     	// Send back to the client
-    	s.write(y.toString(BIGINT_ENCODING));
+    	s.write(y.toByteArray());
     	for( BigInteger bi : bis ){
-    		s.write(bi.toString(BIGINT_ENCODING));
+    		s.write(bi.toByteArray());
     	}
     	
     	List<BigInteger> tsjs = new ArrayList<BigInteger>();
@@ -293,13 +291,13 @@ public class PaternityTestService extends Service {
     	}
     	
     	for( BigInteger tsj : tsjs ){
-    		s.write(tsj.toString(BIGINT_ENCODING));
+    		s.write(tsj.toByteArray());
     	}
     	
     	stopwatch.stop();
         Log.i(TAG, "Server online phase completed in " + stopwatch.getElapsedTime()+ " miliseconds.");
     	
-		return "Server's result: " + s.read(); // threshold this value
+		return "Server's result: " + s.readString(); // threshold this value
     }
     
     
