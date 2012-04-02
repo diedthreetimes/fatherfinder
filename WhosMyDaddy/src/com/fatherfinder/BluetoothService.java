@@ -7,9 +7,10 @@ package com.fatherfinder;
 
 //TODO: Double check that secure implies encryption and not just authentication
 
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.StreamCorruptedException;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -23,11 +24,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-
-//TODO: There is a crucial error if any bytes are send that are the message seperator
-//         This happens with some non zero probability when sending the hashed bytes directly
-//         To fix this at the moment we first convert all our BigIntegers to strings, but this will
-//         degrade performance. It would be better to think of another way, perhaps sending lengths
 
 /**
  * This class does all the work for setting up and managing Bluetooth
@@ -75,8 +71,6 @@ public class BluetoothService {
     // Key names sent to mHandler
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
-    
-    private static final String MESSAGE_SEPERATOR = "%%%%%"; //TODO: make this something smarter (non ascii)
 	
     /**
     * Constructor. Prepares a new Bluetooth session.
@@ -90,8 +84,8 @@ public class BluetoothService {
     }
     
     // TODO: Work out communicating messages to multiple handlers
-    //   This must be done to allow a activity to initiate a connection
-    //     and then hand off to a different activity or service
+    // This allows an activity to start a connection, and then hand it off
+    //   to another activity or service
     public synchronized void setHandler(Handler handler){
     	mHandler = handler;
     }
@@ -223,7 +217,6 @@ public class BluetoothService {
      * @param out The bytes to write
      * @see ConnectedThread#write(byte[])
      */
-    //TODO: add message boundries at this level
     public void write(byte[] out) {
         // Create temporary object
         ConnectedThread r;
@@ -237,11 +230,11 @@ public class BluetoothService {
     }
     
     
-    //TODO: is this safe?
     public void write(String buffer) {
-    	write((buffer + MESSAGE_SEPERATOR).getBytes());
+    	write(buffer.getBytes());
     	if(D) Log.d(TAG, "Write: " + buffer);
     }
+   
     
     /**
      * Read from the ConnectedThread in an unsynchronized manner
@@ -475,29 +468,33 @@ public class BluetoothService {
      * It handles all incoming and outgoing transmissions.
      */
     private class ConnectedThread extends Thread {
-        private final BluetoothSocket mmSocket;
-        private final InputStream mmInStream;
-        private final OutputStream mmOutStream;
+        private static final int MAX_MESSAGE_SIZE  = 256;
+		private final BluetoothSocket mmSocket;
+        private final DataInputStream mmInStream;
+        private final DataOutputStream mmOutStream;
         private boolean mForwardRead = true;
         private BlockingQueue<String> mMessageBuffer;
         	
         public ConnectedThread(BluetoothSocket socket, String socketType) {
             Log.d(TAG, "create ConnectedThread: " + socketType);
             mmSocket = socket;
-            InputStream tmpIn = null;
-            OutputStream tmpOut = null;
+            DataInputStream tmpIn = null;
+            DataOutputStream tmpOut = null;
             mMessageBuffer = new LinkedBlockingQueue<String>(); // TODO: add a capacity here to prevent doS
-
+            
             // Get the BluetoothSocket input and output streams
             try {
-                tmpIn = socket.getInputStream();
-                tmpOut = socket.getOutputStream();
+                tmpIn = new DataInputStream( socket.getInputStream() );
+                tmpOut = new DataOutputStream( socket.getOutputStream() );
+                
+            } catch (StreamCorruptedException e) {
+				Log.e(TAG, "object streams corrupt", e);
             } catch (IOException e) {
                 Log.e(TAG, "temp sockets not created", e);
             }
 
-            mmInStream = tmpIn;
-            mmOutStream = tmpOut;
+			mmInStream = tmpIn;
+			mmOutStream = tmpOut; 
         }
 
        
@@ -537,56 +534,49 @@ public class BluetoothService {
 			}
 		}
 		
-		// Call process on buffer
-		private void processMessage(byte[] buffer, int length) {
-	    	processMessage(new String(buffer, 0,length));
-	    }
-	    
-	    // This will parse a message and add it to the queue
-	    private void processMessage(String buffer) {
-	    	for( String message: buffer.split(MESSAGE_SEPERATOR)) {
-	    		if(message != ""){
-	        		if(D) Log.d(TAG,"Adding to the queue: " + message);
-	        		try {
-						mMessageBuffer.put(message);
-					} catch (InterruptedException e) {
-						Log.e(TAG, "Message add interupted.");
-						//TODO: possibly throw here
-					}
-	        	}
-	    	}
-	    }
+		/**
+         * Write to the connected OutStream.
+         * @param buffer  The bytes to write
+         */
+        public void write(byte[] buffer) {
+            try {
+            	mmOutStream.writeInt(buffer.length);
+                mmOutStream.write(buffer);               
+
+                // Share the sent message back to the UI Activity
+                mHandler.obtainMessage(MESSAGE_WRITE, -1, -1, buffer)
+                        .sendToTarget();
+            } catch (IOException e) {
+                Log.e(TAG, "Exception during write", e);
+            }
+        }
 
 		public void run() {
             Log.i(TAG, "BEGIN mConnectedThread");
-            byte[] buffer = new byte[9999]; 
-            //TODO: Investigate this being the maximum buffer size. Make sure all message sizes are allowed
-            //      Not all messages are allowed, only MAX_BUFFER bytes are read, thus larger messages
-            //      Or multiple messages read all at once may get split up.
-            //      A possible fix is to searilize data, watch for the seperator character, or just send the
-            //      message length first. Potentially look at http://code.google.com/p/protobuf/
+            byte[] buffer = new byte[MAX_MESSAGE_SIZE]; 
+            
             int bytes;
-
+			
             // Keep listening to the InputStream while connected
             while (true) {
             	try {
             		// Read from the InputStream
-            		bytes = mmInStream.read(buffer);	                    
-	                    
-            		// Trim off the seperator 
-            		//TODO: This shouldn't be here, instead use a buffer that waits for a complete message
-            		bytes = bytes - MESSAGE_SEPERATOR.getBytes().length;
-	                    
-            		//if(D) Log.d(TAG, "We've recieved a read: " + (new String(buffer,0,bytes)));
-	                           
-                    if(!mForwardRead)
-                    	processMessage(buffer,bytes);                    
-                    else{
-	                    // Send the obtained bytes to the UI Activity
-	                    if(bytes > 0) {
-	                    	mHandler.obtainMessage(MESSAGE_READ, bytes, -1, buffer)
+            		bytes = mmInStream.readInt();	
+            		mmInStream.readFully(buffer, 0, bytes);
+            		
+                    if(mForwardRead) {
+	                    mHandler.obtainMessage(MESSAGE_READ, buffer.length, -1, buffer)
 	                            .sendToTarget();
-	                    }
+                    }
+                    else {
+                    	String message = new String(buffer,0,bytes);
+			    	    if(D) Log.d(TAG, "Adding to the queue: " + message);
+			    	    try {
+							mMessageBuffer.put(message);
+						} catch (InterruptedException e) {
+							Log.e(TAG, "Message add interupted.");
+							//TODO: possibly throw here
+						}
                     }
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
@@ -596,24 +586,6 @@ public class BluetoothService {
                     break;
                 }
         	}
-        }
-    
-		//TODO: Cleanup only the read/write methods we want to support
-		
-        /**
-         * Write to the connected OutStream.
-         * @param buffer  The bytes to write
-         */
-        public void write(byte[] buffer) {
-            try {
-                mmOutStream.write(buffer);
-
-                // Share the sent message back to the UI Activity
-                mHandler.obtainMessage(MESSAGE_WRITE, -1, -1, buffer)
-                        .sendToTarget();
-            } catch (IOException e) {
-                Log.e(TAG, "Exception during write", e);
-            }
         }
 
         public void cancel() {
