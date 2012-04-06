@@ -24,7 +24,7 @@ import android.util.Log;
 
 // At the moment we use the built in BigInteger implementation to do our calculations.
 // TODO: Benchmark an openssl/gmp version
-public class PaternityTestService extends Service {
+public class PSI_C extends Service {
 	// Debugging
     private static final String TAG = "PaternityTestService";
     private static final boolean D = true;
@@ -51,8 +51,8 @@ public class PaternityTestService extends Service {
      * IPC.
      */
     public class LocalBinder extends Binder {
-        PaternityTestService getService() {
-            return PaternityTestService.this;
+        PSI_C getService() {
+            return PSI_C.this;
         }
     }
     
@@ -81,14 +81,15 @@ public class PaternityTestService extends Service {
     // Conduct the Test
     // TODO: just return a boolean (or better yet think about returning a type T when refactoring)
     /**
-     * Conduct the paternity test
+     * Perform the Private Set Intersection (Cardinality) protocol.
      * 
      * If we are the server, we assume the client is already connected. If we are the client we let the server know we are here.
      * @param s A connected bluetooth service
-     * @param client Conduct the test as server or client
+     * @param client Conduct the test as server or client\
+     * @param inputSet The data to be intersected
      * @return The result of the test
      */
-    public String conductTest(BluetoothService s, boolean client) {
+    public String conductTest(BluetoothService s, boolean client, List<String> inputSet) {
     	String ret = null;
     			
     	//Switch to synchronous message reading. 
@@ -100,11 +101,11 @@ public class PaternityTestService extends Service {
     		//TODO: Simplify protocol if messages are guaranteed (they may not be)
 	    	if(client){
 	    		initiateClient(s);
-	    		ret= conductClientTest(s);
+	    		ret= conductClientTest(s, inputSet);
 	    	}
 	    	else{
 	    		initiateServer(s);
-	    		ret = conductServerTest(s);
+	    		ret = conductServerTest(s, inputSet);
 	    	}
     	}
     	finally {
@@ -176,7 +177,7 @@ public class PaternityTestService extends Service {
     }
     
     // Actually perform the test (these will be overides from a testing base class (and can be the same function)
-    private String conductClientTest(BluetoothService s){
+    private String conductClientTest(BluetoothService s, List<String> input){
     	// OFFLINE PHASE
     	stopwatch.start();
     	BigInteger rc  = randomRange(q); // Secret 1
@@ -185,7 +186,7 @@ public class PaternityTestService extends Service {
     	BigInteger x = g.modPow(rc, p);
     	
     	List<BigInteger> ais = new ArrayList<BigInteger>(); // The set {a1,a2,...,ai}
-    	for( String marker: getMarkerLengths() ){
+    	for( String marker: input ){
     		ais.add(hash(marker).modPow(rc1, p));
     	}
    
@@ -234,7 +235,7 @@ public class PaternityTestService extends Service {
 		return String.valueOf(sharedLengths); //TODO: return a boolean based on ERROR_THRESHOLD
     }
     
-    private String conductServerTest(BluetoothService s) {
+    private String conductServerTest(BluetoothService s, List<String> input) {
     	// OFFLINE PHASE
     	stopwatch.start();
     	BigInteger rs  = randomRange(q); // Secret 1
@@ -243,7 +244,7 @@ public class PaternityTestService extends Service {
     	BigInteger y = g.modPow(rs, p);
     	
     	List<BigInteger> ksjs = new ArrayList<BigInteger>(); // The set {ks1,ks2,...,ksi}
-    	for( String marker: getMarkerLengths() ){
+    	for( String marker: input ){
     		ksjs.add(hash(marker).modPow(rs1, p));
     	}
     	
@@ -349,25 +350,9 @@ public class PaternityTestService extends Service {
 		return hash(input.toByteArray(), (byte)1);
 	}
     
-    private List<String> getMarkerLengths(){
-    	//TODO: Implement Reading from SD (in an encyrpted fashion)
-    
-    	//int[] markerLengths = {1,2,3,4,5};
-    	//String[] markerNames = {"Mark1","secondMarker","MarkNumber3", "Mark4", "Mark5"};
-    	int[] markerLengths = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25};
-    	markerLengths[1] = (int) (Math.random()*100.0);
-    	String[] markerNames = {"Mark1","SecondMarker","MarkNumber3","Mark4","Mark5","Mark6","Mark7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25"};
-    	List<String> ret = new ArrayList<String>();
-    	
-    	for( int i = 0; i < markerLengths.length; i++ ){
-    		ret.add(markerNames[i].concat( String.valueOf(markerLengths[i]) ));
-    	}	
-    	
-    	return ret;
-    }
     
     // Calculate a random number between 0 and range (exclusive)
-    //TODO: We can't use securerandom for generating keys. THIS MUST BE CHANGED
+	//TODO: Is secure random really secure??
     private BigInteger randomRange(BigInteger range){
     	//TODO: Is there anything else we should fall back on here perhaps openssl bn_range
     	//         another option is using an AES based key generator (the only algorithim supported by android)

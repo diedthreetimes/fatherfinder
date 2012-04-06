@@ -5,6 +5,8 @@ package com.fatherfinder;
  * estabilishing and listening for bluetooth connections
  */
 
+//TODO: benchmark (figure out what is slowing down) this new method of encoding vs string encoding (this may be a GC issue)
+
 //TODO: Double check that secure implies encryption and not just authentication
 
 import java.io.DataInputStream;
@@ -35,7 +37,7 @@ import android.util.Log;
 public class BluetoothService {	
 	// Debugging
     private static final String TAG = "BluetoothService";
-    private static final boolean D = true;
+    private static final boolean D = false;
     
     // Name for the SDP record when creating server socket
     private static final String NAME_SECURE = "GenomicTestSecure";

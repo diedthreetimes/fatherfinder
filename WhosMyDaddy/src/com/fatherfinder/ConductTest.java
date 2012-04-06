@@ -3,13 +3,9 @@ package com.fatherfinder;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.content.ComponentName;
-import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.IBinder;
 import android.os.Message;
 import android.util.Log;
 import android.view.Menu;
@@ -66,8 +62,8 @@ public class ConductTest extends Activity {
     //TODO: This is needed to ensure that the bluetooth is turned on. Think about refactoring into service
     // Local Bluetooth adapter
     private BluetoothAdapter mBluetoothAdapter = null;
-    // Member object for the chat services
-    private BluetoothService mMessageSerivce = null; //TODO: make this an interface
+    // Member object for the communication services
+    private BluetoothService mMessageService = null; //TODO: make this an interface
     // Array adapter for the conversation thread
     private ArrayAdapter<String> mMessageLogArrayAdapter; //TODO: remove this it is jsut for testing
     
@@ -105,8 +101,10 @@ public class ConductTest extends Activity {
             startActivityForResult(enableIntent, REQUEST_ENABLE_BT);
         // Otherwise, setup the chat session
         } else {
-            if (mMessageSerivce == null) setupChat();
+            if (mMessageService == null) setupChat();
         }
+        
+        PaternityTest.start(getBaseContext()); //TODO: Refactor this. What if we start multiple tests (plus this is weird)
     }
 	
 	@Override
@@ -117,11 +115,11 @@ public class ConductTest extends Activity {
         // Performing this check in onResume() covers the case in which BT was
         // not enabled during onStart(), so we were paused to enable it...
         // onResume() will be called when ACTION_REQUEST_ENABLE activity returns.
-        if (mMessageSerivce != null) {
+        if (mMessageService != null) {
             // Only if the state is STATE_NONE, do we know that we haven't started already
-            if (mMessageSerivce.getState() == BluetoothService.STATE_NONE) {
+            if (mMessageService.getState() == BluetoothService.STATE_NONE) {
               // Start the Bluetooth chat services
-              mMessageSerivce.start();
+              mMessageService.start();
             }
         }
     }
@@ -139,12 +137,12 @@ public class ConductTest extends Activity {
         mStartButton = (Button) findViewById(R.id.button_start);
         mStartButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
-                doTest( PaternityTestService.TEST_NAME, true ); // Start the paternity test as the client
+                doTest( PSI_C.TEST_NAME, true ); // Start the paternity test as the client
             }
         });
 
         // Initialize the BluetoothService to perform bluetooth connections
-        mMessageSerivce = new BluetoothService(this, mHandler);
+        mMessageService = new BluetoothService(this, mHandler);
     }
 	
 	 @Override
@@ -163,11 +161,11 @@ public class ConductTest extends Activity {
     public void onDestroy() {
         super.onDestroy();
         // Stop the Bluetooth chat services
-        if (mMessageSerivce != null) mMessageSerivce.stop();
+        if (mMessageService != null) mMessageService.stop();
         if(D) Log.e(TAG, "--- ON DESTROY ---");
         
         // Kill the testing service
-        doUnbindTestService();
+        PaternityTest.stop();
     }
     
     private void ensureDiscoverable() {
@@ -188,42 +186,29 @@ public class ConductTest extends Activity {
      * @param asClient Flag indicating if the test is conducted as client or server
      */
     // This will fire off the desired test service and connect it to the chosen device
-    //TODO: Investigate bugs that may occur from two tests running at the same time.
-    //         a possible fix could be to check if a test is already running, since they use the same bluetooth connection
-    //         this could be done in the handler
     private void doTest(String test, boolean asClient) {
-    	if(D) Log.d(TAG, "Starting a paternity test with " + asClient);
+    	
     	// TODO: Switch on test & make the values constants
     	// TODO: Make less bluetooth specific perhaps by housing connection information inside
     	//       of the service
     	
         // Check that we're actually connected before trying anything
-        if (mMessageSerivce.getState() != BluetoothService.STATE_CONNECTED) {
+        if (mMessageService.getState() != BluetoothService.STATE_CONNECTED) {
             Toast.makeText(this, R.string.not_connected, Toast.LENGTH_SHORT).show();
             return;
         }
 
         // TODO: Display an indicator that the test is taking place
         
-        // Start a PaternityTest and give it the BluetoothService for communication
-        doBindTestService(PaternityTestService.class);
-         
-        // TODO: This is really tacky and should be cleaned up with some better way perhaps waiting until the service is bound
-        //          or we can bind to the service ahead of time (we should probably just bind ahead of time)
-        mAsClient = asClient;
-        if(mTestService != null)
-        	displayResult( mTestService.conductTest(mMessageSerivce, mAsClient) );
+        displayResult(PaternityTest.conductTest(mMessageService, asClient));
     }
     
     /**
      * Displays the results of the test
      */
-    //TODO: Make this also include a boolean indicating test success or failure. 
     private void displayResult(String m) {
     	if(m == null)
     		mMessageLogArrayAdapter.add("Something went wrong. Try again");//TODO: something went wrong tell the user (use a resource string)
-    	
-    	//TODO: modify the ui
     	
     	////////// TEST CODE //////////////////
     	// Here we just add the result to the message adapter to look at later
@@ -270,16 +255,15 @@ public class ConductTest extends Activity {
             case BluetoothService.MESSAGE_READ:
                 byte[] readBuf = (byte[]) msg.obj;
                 // construct a string from the valid bytes in the buffer
-                // TODO: ASK the user if the test is desired.
                 // TODO: resolve the issue where both click conduct test at the same time, and two tests are initiated                
                 String readMessage = new String(readBuf, 0, msg.arg1);
                 if(D) Log.d(TAG, "Received the message: " + readMessage);
                 
-                String[] parsed_message = readMessage.split(PaternityTestService.SEPERATOR);
+                String[] parsed_message = readMessage.split(PSI_C.SEPERATOR);
                 
                 // TODO: look at this
                 
-                if(parsed_message.length > 1 && parsed_message[0].equals(PaternityTestService.START_TEST_MESSAGE)) //TODO: refactor for arbitrary tests
+                if(parsed_message.length > 1 && parsed_message[0].equals(PSI_C.START_TEST_MESSAGE)) //TODO: refactor for arbitrary tests
                 	doTest(parsed_message[1], false);
                 break;
             case BluetoothService.MESSAGE_DEVICE_NAME:
@@ -351,53 +335,6 @@ public class ConductTest extends Activity {
         // Get the BluetoothDevice object
         BluetoothDevice device = mBluetoothAdapter.getRemoteDevice(address);
         // Attempt to connect to the device
-        mMessageSerivce.connect(device, secure);
-    }
-    
-    // Handle Connecting to the test service (From docs)
-    
-    private PaternityTestService mTestService;
-    private boolean mIsBound = false;
-    private boolean mAsClient;
-
-    private ServiceConnection mTestConnection = new ServiceConnection() {
-        public void onServiceConnected(ComponentName className, IBinder service) {
-            // This is called when the connection with the service has been
-            // established, giving us the service object we can use to
-            // interact with the service.  Because we have bound to a explicit
-            // service that we know is running in our own process, we can
-            // cast its IBinder to a concrete class and directly access it.
-            mTestService = ((PaternityTestService.LocalBinder)service).getService();
-            
-            //TODO: Is this really the best way to display the result?
-            displayResult( mTestService.conductTest(mMessageSerivce, mAsClient) );
-            
-        }
-
-        public void onServiceDisconnected(ComponentName className) {
-            // This is called when the connection with the service has been
-            // unexpectedly disconnected -- that is, its process crashed.
-            // Because it is running in our same process, we should never
-            // see this happen.
-            mTestService = null;
-        }
-    };
-    
-    void doBindTestService(Class<PaternityTestService> klass) {
-        // Establish a connection with the service.  We use an explicit
-        // class name because we want a specific service implementation that
-        // we know will be running in our own process (and thus won't be
-        // supporting component replacement by other applications).
-        bindService(new Intent(ConductTest.this, 
-                klass), mTestConnection, Context.BIND_AUTO_CREATE);
-        mIsBound = true;
-    }
-
-    void doUnbindTestService() {
-        if (mIsBound) {
-            // Detach our existing connection.
-            unbindService(mTestConnection);
-            mIsBound = false;
-        }
+        mMessageService.connect(device, secure);
     }
 }
