@@ -134,17 +134,12 @@ public class PSI_C extends AbstractPSIProtocol {
     		s.write(bi.toByteArray());
     	}
     	
-    	List<BigInteger> tsjs = new ArrayList<BigInteger>();
     	for(BigInteger ksj : ksjs){
-    		//TODO: Should this be a different hash? Yes
     		// This is the following calculation all mod p
     		// H(x^Rs * ksj )
-    		tsjs.add(hash( x.modPow(rs, p).multiply(ksj).mod(p) ));
+    		s.write((hash( x.modPow(rs, p).multiply(ksj).mod(p) )).toByteArray());
     	}
     	
-    	for( BigInteger tsj : tsjs ){
-    		s.write(tsj.toByteArray());
-    	}
     	
     	stopwatch.stop();
         Log.i(TAG, "Server online phase completed in " + stopwatch.getElapsedTime()+ " miliseconds.");
