@@ -1,8 +1,6 @@
 package com.fatherfinder;
 
 import java.math.BigInteger;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -24,160 +22,13 @@ import android.util.Log;
 
 // At the moment we use the built in BigInteger implementation to do our calculations.
 // TODO: Benchmark an openssl/gmp version
-public class PSI_C extends Service {
+public class PSI_C extends AbstractPSIProtocol {
 	// Debugging
-    private static final String TAG = "PaternityTestService";
-    private static final boolean D = true;
-    
-    public static final String TEST_NAME = "PaternityTest";
-    public static final String SEPERATOR = ";;";
-    public static final String START_TEST_MESSAGE = "START";
-    public static final String ACK_START_MESSAGE = "ACK_START";
-    
-    // The number of allowed mismatches
-    private static final int ERROR_THRESHOLD = 0;
-	
-    //public keys
-    private BigInteger p, q, g;
-
-    // t = (p-1)/q to hash into the group Z*p
-    private BigInteger t;
-    
-    private StopWatch stopwatch;
-    
-	/**
-     * Class for clients to access.  Because we know this service always
-     * runs in the same process as its clients, we don't need to deal with
-     * IPC.
-     */
-    public class LocalBinder extends Binder {
-        PSI_C getService() {
-            return PSI_C.this;
-        }
-    }
-    
-    @Override
-    public void onCreate(){
-    	loadSharedKeys();
-    	stopwatch = new StopWatch();
-    }
-    
-    @Override //TODO: do we need this? I don't think so since we only allow binding to the service
-    public int onStartCommand(Intent intent, int flags, int startId) {
-    	if(D)
-    		Log.d(TAG, "Received start id " + startId + ": " + intent);
-    	
-        // We want to ensure all intents are processed
-        return START_REDELIVER_INTENT;
-    }
-	
-    // This is the object that receives interactions from clients.
-    private final IBinder mBinder = new LocalBinder();
-    
-	@Override public IBinder onBind(Intent intent) {
-		return mBinder;
-	}
-    	
-    // Conduct the Test
-    // TODO: just return a boolean (or better yet think about returning a type T when refactoring)
-    /**
-     * Perform the Private Set Intersection (Cardinality) protocol.
-     * 
-     * If we are the server, we assume the client is already connected. If we are the client we let the server know we are here.
-     * @param s A connected bluetooth service
-     * @param client Conduct the test as server or client\
-     * @param inputSet The data to be intersected
-     * @return The result of the test
-     */
-    public String conductTest(BluetoothService s, boolean client, List<String> inputSet) {
-    	String ret = null;
-    			
-    	//Switch to synchronous message reading. 
-    	s.setReadLoop(false); // this may take a message to take affect
-    	// The first step should be identifying which test is going to be conducted for now this is determined based on the class
-    	
-    	try{
-	    	//TODO: think about extracting the client and server portions into different functions
-    		//TODO: Simplify protocol if messages are guaranteed (they may not be)
-	    	if(client){
-	    		initiateClient(s);
-	    		ret= conductClientTest(s, inputSet);
-	    	}
-	    	else{
-	    		initiateServer(s);
-	    		ret = conductServerTest(s, inputSet);
-	    	}
-    	}
-    	finally {
-    		
-    		s.setReadLoop(true); //TODO: make this revert to its previous state
-    	}
-    	
-    	
-    	
-    	return ret;
-    	
-    	
-    }
-    
-    
-    // Tell the client we heard them
-    private void initiateServer(BluetoothService s){
-    	if(D) Log.d(TAG, "Server started");
-		// Acknowledge the start message
-		s.write(ACK_START_MESSAGE); //TODO: we probably don't need any acks look closer
-	
-
-		String read;
-		
-		while(true) {
-			read = s.readString();
-			if(read == null){
-				if(D) Log.d(TAG, "Server: Read failed");
-				//TODO: Should we raise? yes
-			}
-			else if(read.equals(START_TEST_MESSAGE + SEPERATOR + TEST_NAME)){ //
-				if(D) Log.d(TAG, "Ack not recieved, RE-ACK" + read);
-				s.write(ACK_START_MESSAGE);
-			}
-			else if(read.equals(ACK_START_MESSAGE)){
-				break;
-			}
-			else{
-				if(D) Log.d(TAG, "Non start recieved: " + read);
-				break; //TODO: should we raise here? Or just continue looping
-			}
-		}
-		
-    }
-    
-    // Tell the server we are listening
-    private void initiateClient(BluetoothService s){
-    	// Say hello
-    	s.write(START_TEST_MESSAGE + SEPERATOR + TEST_NAME);
-
-    	if(D) Log.d(TAG, "Client is listening");
-
-    	while(true){
-    		String read = s.readString();
-    		if(read == null){
-    			if(D) Log.d(TAG, "Client: Read failed");
-    			//TODO: Should we raise? yes
-    		}
-    		else if(read.equals(ACK_START_MESSAGE)) { //TODO: Should we look for which test was started as well?
-    			s.write(ACK_START_MESSAGE);
-    			break;
-    		}
-    		else { //We didn't hear the ack resend.
-    			if(D) Log.d(TAG, "Garbage was recieved" + read);
-    			s.write(START_TEST_MESSAGE + SEPERATOR + TEST_NAME);
-    		}
-
-    	}
-    }
+    private final String TAG = "PSI_C";
+    private final boolean D = true;
     
     // Actually perform the test (these will be overides from a testing base class (and can be the same function)
-    private String conductClientTest(BluetoothService s, List<String> input){
+    protected String conductClientTest(BluetoothService s, List<String> input){
     	// OFFLINE PHASE
     	stopwatch.start();
     	BigInteger rc  = randomRange(q); // Secret 1
@@ -232,10 +83,10 @@ public class PSI_C extends Service {
     	stopwatch.stop();
         Log.i(TAG, "Client online phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
     	
-		return String.valueOf(sharedLengths); //TODO: return a boolean based on ERROR_THRESHOLD
+		return String.valueOf(sharedLengths);
     }
     
-    private String conductServerTest(BluetoothService s, List<String> input) {
+    protected String conductServerTest(BluetoothService s, List<String> input) {
     	// OFFLINE PHASE
     	stopwatch.start();
     	BigInteger rs  = randomRange(q); // Secret 1
@@ -299,71 +150,5 @@ public class PSI_C extends Service {
         Log.i(TAG, "Server online phase completed in " + stopwatch.getElapsedTime()+ " miliseconds.");
     	
 		return "Server's result: " + s.readString(); // threshold this value
-    }
-    
-    
-    // Utility functions
-	// Load the common inputs, p q and g which are:
-	// p - a prime number
-	// q - the sub prime
-	// g - the base (generator)
-	private void loadSharedKeys(){
-		p = new BigInteger("b95b6c851ff243745411a0c901a14c217d429edba65b8a298534731e5c3182bf9806f592611bbf2ded9fc4a1b21acfe685112ec38d6d7c4b4bf28b5bcc636b6c4844fdcf449b002b4bc5143a32e0f7b713097b062683cc7cdaa7adfd6c49b0d897487d4e2d0c94bf0c8cafe11580cb84f14ca7922142503ee0dfc377591233c1", 16);
-		q = new BigInteger("d9ad24d2728323f368eac50bb1e1154483d820b7", 16);
-		g = new BigInteger("af3ecd5a39c2ec6fd3ebfd44a4e18a422429c3b18ec6a716968f0ea524f1e19a67f7e117211a802eaae551e4b43967b4b63a50ef6d2c31397a845456550eaa89d4fe8959e402e1484139e5ff52187882f25967ad10e294c7980dd678ebb2a592e031e75ada46d1c5af16caebcd86d06430de7e7ba6fb71590d7329ee744977dd", 16);
-	
-		//TODO: Load these keys from a file
-		// TODO: Find a way to generate them?
-		
-		if(D) Log.d(TAG, "P: " + p);
-		if(D) Log.d(TAG, "q: " + q);
-		if(D) Log.d(TAG, "g: " + g);
-		
-		t = (p.subtract(BigInteger.ONE).divide(q));
-	}
-	
-	private BigInteger hash(byte [] message, byte selector){
-		
-		// input = selector | message
-		byte [] input = new byte[message.length + 1];
-		System.arraycopy(message, 0, input, 1, message.length);
-		input[0] = selector;
-		
-		MessageDigest digest = null;
-		try {
-			digest = MessageDigest.getInstance("SHA-1");
-    	} catch (NoSuchAlgorithmException e1) {
-    		Log.e(TAG, "SHA-1 is not supported");
-    		return null; // TODO: Raise an error?
-    	}
-		digest.reset();
-    	    
-		return new BigInteger(digest.digest(input));
-	}
-	
-	// H, as in the PCI-C protocol. Here the input is a string, and the output is an element in Z*p
-	private BigInteger hash(String input){
-		return hash(input.getBytes(), (byte)0).mod(p).modPow(t, p);
-	}
-	// H', as in the PCI-C protocol. The input is an integer, and the output is any <160 bit integer
-	private BigInteger hash(BigInteger input){
-		return hash(input.toByteArray(), (byte)1);
-	}
-    
-    
-    // Calculate a random number between 0 and range (exclusive)
-	//TODO: Is secure random really secure??
-    private BigInteger randomRange(BigInteger range){
-    	//TODO: Is there anything else we should fall back on here perhaps openssl bn_range
-    	//         another option is using an AES based key generator (the only algorithim supported by android)
-    	
-    	// TODO: Should we be keeping this rand around? 
-    	SecureRandom rand = new SecureRandom();
-    	BigInteger temp = new BigInteger(range.bitLength(), rand);
-    	while(temp.compareTo(range) >= 0 || temp.equals(BigInteger.ZERO)){
-    		temp = new BigInteger(range.bitLength(), rand);
-    	}
-    	return temp;
-    	
     }
 }

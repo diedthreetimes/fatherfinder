@@ -137,7 +137,7 @@ public class ConductTest extends Activity {
         mStartButton = (Button) findViewById(R.id.button_start);
         mStartButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
-                doTest( PSI_C.TEST_NAME, true ); // Start the paternity test as the client
+                doTest( PaternityTest.TEST_NAME, true ); // Start the paternity test as the client
             }
         });
 
@@ -187,8 +187,6 @@ public class ConductTest extends Activity {
      */
     // This will fire off the desired test service and connect it to the chosen device
     private void doTest(String test, boolean asClient) {
-    	
-    	// TODO: Switch on test & make the values constants
     	// TODO: Make less bluetooth specific perhaps by housing connection information inside
     	//       of the service
     	
@@ -200,6 +198,8 @@ public class ConductTest extends Activity {
 
         // TODO: Display an indicator that the test is taking place
         
+        // TODO: Switch on test & make the values constants
+        
         displayResult(PaternityTest.conductTest(mMessageService, asClient));
     }
     
@@ -208,7 +208,7 @@ public class ConductTest extends Activity {
      */
     private void displayResult(String m) {
     	if(m == null)
-    		mMessageLogArrayAdapter.add("Something went wrong. Try again");//TODO: something went wrong tell the user (use a resource string)
+    		mMessageLogArrayAdapter.add(getString(R.string.something_went_wrong));//TODO: something went wrong tell the user (use a resource string)
     	
     	////////// TEST CODE //////////////////
     	// Here we just add the result to the message adapter to look at later
@@ -259,11 +259,12 @@ public class ConductTest extends Activity {
                 String readMessage = new String(readBuf, 0, msg.arg1);
                 if(D) Log.d(TAG, "Received the message: " + readMessage);
                 
-                String[] parsed_message = readMessage.split(PSI_C.SEPERATOR);
+                String[] parsed_message = readMessage.split(PrivateProtocol.SEPERATOR);
                 
-                // TODO: look at this
+                // TODO: Ask the user if conducting the test is ok
+                // TODO: This is hacky, we shouldn't need to be looking at PrivateProtocol
                 
-                if(parsed_message.length > 1 && parsed_message[0].equals(PSI_C.START_TEST_MESSAGE)) //TODO: refactor for arbitrary tests
+                if(parsed_message.length > 1 && parsed_message[0].equals(PrivateProtocol.START_TEST_MESSAGE)) //TODO: refactor for arbitrary tests
                 	doTest(parsed_message[1], false);
                 break;
             case BluetoothService.MESSAGE_DEVICE_NAME:

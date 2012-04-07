@@ -17,7 +17,7 @@ import android.util.Log;
  *
  */
 
-//TODO: For now this isn't static, but is singleton. Should it be this way?
+//TODO: For now is singleton. Should it be this way? Like this inheritance is weird
 
 //TODO: Investigate bugs that may occur from two tests running at the same time.
 //         a possible fix could be to check if a test is already running, since they use the same bluetooth connection
@@ -28,6 +28,8 @@ public class PaternityTest {
 	// Debugging
     private static final String TAG = "PaternityTest";
     private static final boolean D = true;
+    
+    public static final String TEST_NAME = "PaternityTest";
     
     private static PaternityTest ref;
 	
@@ -66,7 +68,7 @@ public class PaternityTest {
 	
 	// Handle Connecting to the test service (From docs)
     
-    private PSI_C mTestService;
+    private PrivateProtocol mTestService;
     private boolean mIsBound = false;
 
     private ServiceConnection mTestConnection = new ServiceConnection() {
@@ -76,7 +78,7 @@ public class PaternityTest {
             // interact with the service.  Because we have bound to a explicit
             // service that we know is running in our own process, we can
             // cast its IBinder to a concrete class and directly access it.
-            mTestService = ((PSI_C.LocalBinder)service).getService();
+            mTestService = ((PrivateProtocol.LocalBinder)service).getService();
         }
 
         public void onServiceDisconnected(ComponentName className) {
@@ -121,7 +123,7 @@ public class PaternityTest {
 	private String doTest(BluetoothService messageService, boolean isClient){
 		if(D) Log.d(TAG, "Starting a paternity test with " + isClient);
          
-        return mTestService.conductTest(messageService, isClient, getMarkerLengths());
+        return mTestService.conductTest(TEST_NAME, messageService, isClient, getMarkerLengths());
 	}
 	
 	private List<String> getMarkerLengths(){
