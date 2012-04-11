@@ -6,30 +6,18 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import android.app.Service;
-import android.content.Intent;
-import android.os.Binder;
-import android.os.IBinder;
 import android.util.Log;
 
-/**
- * This class does all the work for conducting the secure communication
- * with another user. It does not handle any communication directly, but instead
- * relies on a Object that implements an BluetoothService's connected thread api
- * @author skyf
- *
- */
+//TODO: Finish implementing this!!
 
-// At the moment we use the built in BigInteger implementation to do our calculations.
-// TODO: Benchmark an openssl/gmp version
-public class PSI_C extends AbstractPSIProtocol {
+public class PSI extends AbstractPSIProtocol {
 	// Debugging
-    private final String TAG = "PSI_C";
+    private final String TAG = "PSI";
     private final boolean D = true;
     
-    // Actually perform the test (these will be overides from a testing base class (and can be the same function)
-    protected String conductClientTest(BluetoothService s, List<String> input){
-    	// OFFLINE PHASE
+	@Override
+	protected String conductClientTest(BluetoothService s, List<String> input) {
+		// OFFLINE PHASE
     	stopwatch.start();
     	BigInteger rc  = randomRange(q); // Secret 1
     	BigInteger rc1 = randomRange(q); // Secret 2
@@ -72,22 +60,26 @@ public class PSI_C extends AbstractPSIProtocol {
     	}
     	
     	// tcis = tcis ^ tsjs (intersection)
-    	tcis.retainAll(tsjs);
+    	//tcis.retainAll(tsjs);
     	
-    	int sharedLengths = tcis.size();
+    	//int sharedLengths = tcis.size();
     	
     	// Send result
-    	if(D) Log.d(TAG, "Client calculated: " + String.valueOf(sharedLengths));
-    	s.write(String.valueOf(sharedLengths));
+    	//if(D) Log.d(TAG, "Client calculated: " + String.valueOf(sharedLengths));
+    	//s.write(String.valueOf(sharedLengths));
+    	
+    	//TODO: Write custom intersection and keep hash table around for restructuring result
     	
     	stopwatch.stop();
         Log.i(TAG, "Client online phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
     	
-		return String.valueOf(sharedLengths);
-    }
-    
-    protected String conductServerTest(BluetoothService s, List<String> input) {
-    	// OFFLINE PHASE
+		//return String.valueOf(sharedLengths);
+        return null;
+	}
+
+	@Override
+	protected String conductServerTest(BluetoothService s, List<String> input) {
+		// OFFLINE PHASE
     	stopwatch.start();
     	BigInteger rs  = randomRange(q); // Secret 1
     	BigInteger rs1 = randomRange(q); // Secret 2
@@ -111,39 +103,29 @@ public class PSI_C extends AbstractPSIProtocol {
     	List<BigInteger> ais = new ArrayList<BigInteger>(); // The set {a1,a2,...,ai}
     	BigInteger x = null;
     	
-    	// This code has been reworked to be pipelined. The idea being, we start computation immediately 
-    	//   after we receive the clients data. 
-    	
     	// Start reading client data
     	x = new BigInteger(s.read());
     	
-    	List<BigInteger> bis = new ArrayList<BigInteger>(); // will store client data before shuffling
-    	
+    	s.write(y.toByteArray());
     	for(int i = 0; i < ksjs.size(); i++){
     		// Read an ai
     		ais.add(new BigInteger(s.read()));
     		
-    		// Add our secret
-    		bis.add( ais.get(i).modPow(rs1, p) );
-    	}
-    	Collections.shuffle(bis, r);
-    	
-    	// Send back to the client
-    	s.write(y.toByteArray());
-    	for( BigInteger bi : bis ){
-    		s.write(bi.toByteArray());
+    		// Add our secret and send
+    		s.write(ais.get(i).modPow(rs1, p).toByteArray());
     	}
     	
     	for(BigInteger ksj : ksjs){
     		// This is the following calculation all mod p
     		// H(x^Rs * ksj )
-    		s.write((hash( x.modPow(rs, p).multiply(ksj).mod(p) )).toByteArray());
+    		s.write((hash( x.modPow(rs, p).multiply(ksj).mod(p) ).toByteArray()));
     	}
     	
     	
     	stopwatch.stop();
         Log.i(TAG, "Server online phase completed in " + stopwatch.getElapsedTime()+ " miliseconds.");
     	
-		return "Server's result: " + s.readString();
-    }
+		return "Server's result: " + s.readString(); // threshold this value
+	}
+
 }
