@@ -49,15 +49,13 @@ public class ConductTest extends Activity {
     // Intent request codes
     private static final int REQUEST_CONNECT_DEVICE_SECURE = 1;
     private static final int REQUEST_ENABLE_BT = 3; //TODO: Refactor this out
-    
-    // Types of tests
-    private static final int PATERNITY_TEST = 1;
 
     //TODO: Change these layouts to be buttons that say (conduct test)
     //     and then display the results
     // Layout Views
     private ListView mMessageLogView;
-    private Button mStartButton;
+    private Button mPatButton;
+    private Button mAncButton;
     
     //TODO: This is needed to ensure that the bluetooth is turned on. Think about refactoring into service
     // Local Bluetooth adapter
@@ -105,7 +103,8 @@ public class ConductTest extends Activity {
         }
         
         PaternityTest.start(getBaseContext()); //TODO: Refactor this. What if we start multiple tests (plus this is weird)
-    }
+        AncestryTest.start(getBaseContext());
+	}
 	
 	@Override
     public synchronized void onResume() {
@@ -134,10 +133,17 @@ public class ConductTest extends Activity {
         mMessageLogView.setAdapter(mMessageLogArrayAdapter);
 
         // Initialize the send button with a listener that for click events
-        mStartButton = (Button) findViewById(R.id.button_start);
-        mStartButton.setOnClickListener(new OnClickListener() {
+        mPatButton = (Button) findViewById(R.id.button_test1);
+        mPatButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
                 doTest( PaternityTest.TEST_NAME, true ); // Start the paternity test as the client
+            }
+        });
+        
+        mAncButton = (Button) findViewById(R.id.button_test2);
+        mAncButton.setOnClickListener(new OnClickListener() {
+            public void onClick(View v) {
+                doTest( AncestryTest.TEST_NAME, true ); // Start the ancestry test as the client
             }
         });
 
@@ -166,6 +172,7 @@ public class ConductTest extends Activity {
         
         // Kill the testing service
         PaternityTest.stop();
+        AncestryTest.stop(); // TODO: Fix this
     }
     
     private void ensureDiscoverable() {
@@ -198,9 +205,20 @@ public class ConductTest extends Activity {
 
         // TODO: Display an indicator that the test is taking place
         
-        // TODO: Switch on test & make the values constants
+        // TODO: think about converting to ints and using a switch
+        String result;
+        if(test.equals(AncestryTest.TEST_NAME)){
+        	result = AncestryTest.conductTest(mMessageService, asClient);
+        }
+        else if(test.equals(PaternityTest.TEST_NAME)){
+        	result = PaternityTest.conductTest(mMessageService, asClient);
+        }
+        else{
+        	Log.e(TAG, "Test name not recognized: " + test);
+        	return;
+        }
         
-        displayResult(PaternityTest.conductTest(mMessageService, asClient));
+        displayResult(result);
     }
     
     /**
@@ -262,6 +280,7 @@ public class ConductTest extends Activity {
                 String[] parsed_message = readMessage.split(PrivateProtocol.SEPERATOR);
                 
                 // TODO: Ask the user if conducting the test is ok
+                
                 // TODO: This is hacky, we shouldn't need to be looking at PrivateProtocol
                 
                 if(parsed_message.length > 1 && parsed_message[0].equals(PrivateProtocol.START_TEST_MESSAGE)) //TODO: refactor for arbitrary tests
