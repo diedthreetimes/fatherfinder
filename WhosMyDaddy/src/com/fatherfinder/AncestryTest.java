@@ -1,14 +1,22 @@
 package com.fatherfinder;
 
+import java.io.File;
+import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
+
+import net.sf.samtools.SAMFileReader;
+import net.sf.samtools.SAMRecord;
+import net.sf.samtools.SAMRecordIterator;
 
 /**
  * This class conducts an ancestry test 
@@ -85,8 +93,14 @@ public class AncestryTest {
             mTestService = null;
         }
     };
-	private Context mContext;
     
+    // Non static private members
+	private Context mContext;
+	private SAMFileReader mReader;
+	private File dataDirectory = Environment.getExternalStorageDirectory();
+    private int mNumSamples = 10;
+	
+	
     private void doBindService(Context context) {
         // Establish a connection with the service.  We use an explicit
         // class name because we want a specific service implementation that
@@ -109,11 +123,12 @@ public class AncestryTest {
     
     private void doStart(Context context){
     	doBindService(context);
-    	
+    	mReader = new SAMFileReader(new File(dataDirectory,"FatherFinder/NA19238.chrom1.ILLUMINA.bwa.YRI.high_coverage.20100311.bam")); //TODO: Unhardcode this (perhaps put this in settings)
     }
 	
     private void doStop(){
     	doUnbindService();
+    	mReader.close();
     }
 	
 	private String doTest(BluetoothService messageService, boolean isClient){
@@ -126,9 +141,37 @@ public class AncestryTest {
 	//           The best way to do this is probably to just use a list object backed by a memory mapped file
 	private List<String> getGenomePositions(){
     	int seed = 10780; // TODO: For now the randomness is hardcoded
+    	Random r = new Random(seed);
     	
-    	Log.e(TAG, "Not Implemented");
+    	StopWatch watch = new StopWatch();
+    	watch.start();
     	
-    	return null;
+    	
+    	//int begin = mReader.hasIndex()
+    	
+    	
+    	Log.d(TAG, "We will start at : " + mReader.getIndex().getStartOfLastLinearBin()); // 9991
+    	
+    	for( int i=0; i < mNumSamples; i++ ){
+    		int idx = r.nextInt();
+    		
+    		// This is probably inefficient (we probably want to preprocces this)
+    		SAMRecord record;
+    		SAMRecordIterator iter;
+    		for( iter = mReader.query("", idx, idx+1, false); iter.hasNext();  ){
+    			record = iter.next();
+    			
+    			Log.d(TAG, "Ref index" + record.getReferenceIndex());
+    			Log.d(TAG, "Random idx" + idx);
+    		}
+    		iter.close();
+    	}
+    	
+    	watch.stop();
+    	if(D) Log.d(TAG, "Loading " + mNumSamples + " took " + watch.getElapsedTimeSecs());
+    	
+	
+    	
+    	return new ArrayList<String>();
     }
 }
