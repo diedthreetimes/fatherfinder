@@ -1,5 +1,5 @@
 // ***************************************************************************                         
-// StringSequence.h (c) 2011 Sky Faber                                               
+// BamSequence.h (c) 2011 Sky Faber                                               
 // SPROUT Lab, Department of Computer Science, UC: Irvine                                              
 // ---------------------------------------------------------------------------         
 // Last modified:  October 2011 (SF)                                       
@@ -54,7 +54,7 @@ class BamSequence : public Sequence {
   int Position(void){ return cur_pos; }
 
  // Data members
- private:
+ protected:
   BamTools::BamMultiReader m_reader;
   
   // TODO: refactor these names
@@ -65,9 +65,9 @@ class BamSequence : public Sequence {
   std::deque<BamTools::BamAlignment> m_alignments;
 
  // Util functions
- private:
-  void retrieve(int n);
-  void init();
-  char calc_position(int i);
+ protected:
+  virtual void retrieve(int n);
+  virtual void init();
+  virtual char calc_position(int i);
 };
 #endif //_BAM_SEQUENCE_H

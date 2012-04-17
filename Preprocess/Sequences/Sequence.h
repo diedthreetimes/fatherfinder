@@ -69,6 +69,7 @@ public:
   // TODO: Overide caster to use PrintSelf in 'cout <<'
 
   //TODO: Implement current/hasNext using next and a private next_item +more
+  //TODO: Think about enforcing position?
 };
 
 #endif //_SEQUENCE_H
