@@ -14,6 +14,8 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.util.Log;
 
+import net.sf.samtools.AbstractBAMFileIndex;
+import net.sf.samtools.LinearIndex;
 import net.sf.samtools.SAMFileReader;
 import net.sf.samtools.SAMRecord;
 import net.sf.samtools.SAMRecordIterator;
@@ -147,22 +149,28 @@ public class AncestryTest {
     	watch.start();
     	
     	
-    	//int begin = mReader.hasIndex()
+    	SAMRecordIterator tIter = mReader.iterator();
+    	int begin = tIter.next().getAlignmentStart();
+    	int length = 10;
+
+    	tIter.close();
     	
-    	
-    	Log.d(TAG, "We will start at : " + mReader.getIndex().getStartOfLastLinearBin()); // 9991
+    	Log.d(TAG, "We will start at : " + begin); // 9991
+    	Log.d(TAG, "We will go for: " + length);
     	
     	for( int i=0; i < mNumSamples; i++ ){
-    		int idx = r.nextInt();
+    		int idx = (int) (r.nextFloat() * length + begin);
     		
     		// This is probably inefficient (we probably want to preprocces this)
     		SAMRecord record;
     		SAMRecordIterator iter;
-    		for( iter = mReader.query("", idx, idx+1, false); iter.hasNext();  ){
+    		Log.d(TAG, "Entering the loop");
+			Log.d(TAG, "Random idx " + idx);
+    		for( iter = mReader.query("A", 0, 1, false); iter.hasNext();  ){
     			record = iter.next();
     			
-    			Log.d(TAG, "Ref index" + record.getReferenceIndex());
-    			Log.d(TAG, "Random idx" + idx);
+    			Log.d(TAG, "Ref index " + record.getReferenceIndex());
+    			Log.d(TAG, "Random idx " + idx);
     		}
     		iter.close();
     	}
