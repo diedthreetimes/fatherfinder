@@ -69,6 +69,7 @@ public class DeviceList extends Activity {
         Button scanButton = (Button) findViewById(R.id.button_scan);
         scanButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
+            	ensureDiscoverable(); //TODO: This may make a device unecessarily discoverable
                 doDiscovery();
                 v.setVisibility(View.GONE);
             }
@@ -198,5 +199,15 @@ public class DeviceList extends Activity {
             }
         }
     };
+    
+    private void ensureDiscoverable() {
+        if(D) Log.d(TAG, "ensure discoverable");
+        if (mBtAdapter.getScanMode() !=
+            BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
+            Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
+            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
+            startActivity(discoverableIntent);
+        }
+    }
 	
 }

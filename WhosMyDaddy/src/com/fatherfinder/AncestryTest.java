@@ -1,6 +1,7 @@
 package com.fatherfinder;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.List;
@@ -124,13 +125,15 @@ public class AncestryTest {
     }
     
     private void doStart(Context context){
-    	doBindService(context);
-    	mReader = new SAMFileReader(new File(dataDirectory,"FatherFinder/NA19238.chrom1.ILLUMINA.bwa.YRI.high_coverage.20100311.bam")); //TODO: Unhardcode this (perhaps put this in settings)
+    	//doBindService(context);
+    	//TODO: Verify file exists otherwise error
+    	
+    	//mReader = new SAMFileReader(new File(dataDirectory,"FatherFinder/NA19238.chrom1.ILLUMINA.bwa.YRI.high_coverage.20100311.bam")); //TODO: Unhardcode this (perhaps put this in settings)
     }
 	
     private void doStop(){
-    	doUnbindService();
-    	mReader.close();
+    	//doUnbindService();
+    	//mReader.close();
     }
 	
 	private String doTest(BluetoothService messageService, boolean isClient){

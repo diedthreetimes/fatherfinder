@@ -70,6 +70,7 @@ public class PaternityTest {
     
     private PrivateProtocol mTestService;
     private boolean mIsBound = false;
+    private static final int THRESHOLD = 23;
 
     private ServiceConnection mTestConnection = new ServiceConnection() {
         public void onServiceConnected(ComponentName className, IBinder service) {
@@ -123,7 +124,12 @@ public class PaternityTest {
 	private String doTest(BluetoothService messageService, boolean isClient){
 		if(D) Log.d(TAG, "Starting a paternity test with " + isClient);
          
-        return mTestService.conductTest(TEST_NAME, messageService, isClient, getMarkerLengths());
+		int common_markers = Integer.valueOf(mTestService.conductTest(TEST_NAME, messageService, isClient, getMarkerLengths()));
+        
+		if(common_markers > THRESHOLD)
+			return "Congratulations! You are related";
+		else
+			return "Unfortunetly, you are not related :(";
 	}
 	
 	private List<String> getMarkerLengths(){

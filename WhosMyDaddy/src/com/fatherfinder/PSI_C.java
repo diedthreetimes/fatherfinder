@@ -144,6 +144,6 @@ public class PSI_C extends AbstractPSIProtocol {
     	stopwatch.stop();
         Log.i(TAG, "Server online phase completed in " + stopwatch.getElapsedTime()+ " miliseconds.");
     	
-		return "Server's result: " + s.readString();
+		return s.readString();
     }
 }

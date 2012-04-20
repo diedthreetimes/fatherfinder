@@ -1,8 +1,10 @@
 package com.fatherfinder;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -131,7 +133,25 @@ public class ConductTest extends Activity {
         mMessageLogArrayAdapter = new ArrayAdapter<String>(this, R.layout.message);
         mMessageLogView = (ListView) findViewById(R.id.message_list);
         mMessageLogView.setAdapter(mMessageLogArrayAdapter);
+        
+        // Write out a few short help messages
+        mMessageLogArrayAdapter.add("In order to conduct a test first open");
+        mMessageLogArrayAdapter.add("the context menu and select connect to a device");
+        mMessageLogArrayAdapter.add("");
+        mMessageLogArrayAdapter.add("");
+        mMessageLogArrayAdapter.add("");
+        mMessageLogArrayAdapter.add("");
+        mMessageLogArrayAdapter.add("");
+        mMessageLogArrayAdapter.add("");
+        mMessageLogArrayAdapter.add("");
+        mMessageLogArrayAdapter.add("");
+        mMessageLogArrayAdapter.add("");
+        mMessageLogArrayAdapter.add("");
+        mMessageLogArrayAdapter.add("");
+        
+        
 
+        
         // Initialize the send button with a listener that for click events
         mPatButton = (Button) findViewById(R.id.button_test1);
         mPatButton.setOnClickListener(new OnClickListener() {
@@ -140,16 +160,23 @@ public class ConductTest extends Activity {
             }
         });
         
-        mAncButton = (Button) findViewById(R.id.button_test2);
+       /* UNCOMMENT FOR ANCESTRY mAncButton = (Button) findViewById(R.id.button_test2);
         mAncButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
                 doTest( AncestryTest.TEST_NAME, true ); // Start the ancestry test as the client
             }
-        });
+        }); */
 
         // Initialize the BluetoothService to perform bluetooth connections
         mMessageService = new BluetoothService(this, mHandler);
+        
+        
+        // This may not be appropriate but we initate the diaolog here
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setMessage("Would you like to connect to another device now?").setPositiveButton("Yes", connectDialogClickListener)
+            .setNegativeButton("No", connectDialogClickListener).show();
     }
+
 	
 	 @Override
     public synchronized void onPause() {
@@ -185,7 +212,6 @@ public class ConductTest extends Activity {
         }
     }
     
-    // CALLBACKS
     
     /**
      * Conducts a test.
@@ -238,6 +264,24 @@ public class ConductTest extends Activity {
 
     // Name of the connected device
     private String mConnectedDeviceName = null;
+    
+    // CALLBACKS
+    
+    // What do do when the connect to device activity is called
+    DialogInterface.OnClickListener connectDialogClickListener = new DialogInterface.OnClickListener() {
+        public void onClick(DialogInterface dialog, int which) {
+            Intent serverIntent = null;
+			switch (which){
+            case DialogInterface.BUTTON_POSITIVE:
+            	serverIntent  = new Intent(ConductTest.this, DeviceList.class);
+                startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
+                break;
+
+            case DialogInterface.BUTTON_NEGATIVE:
+                break;
+            }
+        }
+    };
     
     // ActionBar is a 3.0 thing, will have to find another way if this functionality is desired TODO: test on 4.0
     //private final void setStatus(int resId) {
@@ -315,6 +359,8 @@ public class ConductTest extends Activity {
             if (resultCode == Activity.RESULT_OK) {
                 // Bluetooth is now enabled, so set up a chat session
                 setupChat();
+                
+                
             } else {
                 // User did not enable Bluetooth or an error occurred
                 Log.d(TAG, "BT not enabled");
