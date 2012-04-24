@@ -139,13 +139,19 @@ public class BluetoothService {
     public synchronized void connect(BluetoothDevice device, boolean secure) {
         if (D) Log.d(TAG, "connect to: " + device);
 
-        // Cancel any thread attempting to make a connection
-        if (mState == STATE_CONNECTING) {
-            if (mConnectThread != null) {mConnectThread.cancel(); mConnectThread = null;}
+        // Don't throw out connections if we are already connected
+        if( mState == STATE_CONNECTING || mConnectedThread != null ){
+        	return;
         }
-
-        // Cancel any thread currently running a connection
-        if (mConnectedThread != null) {mConnectedThread.cancel(); mConnectedThread = null;}
+        
+// Commented out for test
+//        // Cancel any thread attempting to make a connection
+//        if (mState == STATE_CONNECTING) {
+//            if (mConnectThread != null) {mConnectThread.cancel(); mConnectThread = null;}
+//        }
+//
+//        // Cancel any thread currently running a connection
+//        if (mConnectedThread != null) {mConnectedThread.cancel(); mConnectedThread = null;}
 
         // Start the thread to connect with the given device
         mConnectThread = new ConnectThread(device, secure);

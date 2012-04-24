@@ -58,7 +58,7 @@ class BamSequence : public Sequence {
   BamTools::BamMultiReader m_reader;
   
   // TODO: refactor these names
-  bool read_all;
+  bool read_all; // Have all alignments been read yet?
   char m_cur;
   int cur_pos;
   std::deque<char> m_ring;

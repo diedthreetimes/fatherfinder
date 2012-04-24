@@ -2,6 +2,7 @@ package com.fatherfinder;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.DialogInterface;
@@ -10,6 +11,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -18,6 +20,7 @@ import android.view.View.OnClickListener;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 
 /*
@@ -51,13 +54,16 @@ public class ConductTest extends Activity {
     // Intent request codes
     private static final int REQUEST_CONNECT_DEVICE_SECURE = 1;
     private static final int REQUEST_ENABLE_BT = 3; //TODO: Refactor this out
+    private static final int REQUEST_DISCOVERABLE = 4;
 
     //TODO: Change these layouts to be buttons that say (conduct test)
     //     and then display the results
     // Layout Views
-    private ListView mMessageLogView;
     private Button mPatButton;
     private Button mAncButton;
+    
+    private ProgressDialog testIndicator;
+    private ProgressDialog connectionIndicator;
     
     //TODO: This is needed to ensure that the bluetooth is turned on. Think about refactoring into service
     // Local Bluetooth adapter
@@ -65,7 +71,6 @@ public class ConductTest extends Activity {
     // Member object for the communication services
     private BluetoothService mMessageService = null; //TODO: make this an interface
     // Array adapter for the conversation thread
-    private ArrayAdapter<String> mMessageLogArrayAdapter; //TODO: remove this it is jsut for testing
     
 	/**
 	 * @see android.app.Activity#onCreate(Bundle)
@@ -127,30 +132,6 @@ public class ConductTest extends Activity {
 	
 	private void setupChat() {
         Log.d(TAG, "setupChat()");
-
-        // Initialize the array adapter for the conversation thread
-        // This maps array data to the view
-        mMessageLogArrayAdapter = new ArrayAdapter<String>(this, R.layout.message);
-        mMessageLogView = (ListView) findViewById(R.id.message_list);
-        mMessageLogView.setAdapter(mMessageLogArrayAdapter);
-        
-        // Write out a few short help messages
-        mMessageLogArrayAdapter.add("In order to conduct a test first open");
-        mMessageLogArrayAdapter.add("the context menu and select connect to a device");
-        mMessageLogArrayAdapter.add("");
-        mMessageLogArrayAdapter.add("");
-        mMessageLogArrayAdapter.add("");
-        mMessageLogArrayAdapter.add("");
-        mMessageLogArrayAdapter.add("");
-        mMessageLogArrayAdapter.add("");
-        mMessageLogArrayAdapter.add("");
-        mMessageLogArrayAdapter.add("");
-        mMessageLogArrayAdapter.add("");
-        mMessageLogArrayAdapter.add("");
-        mMessageLogArrayAdapter.add("");
-        
-        
-
         
         // Initialize the send button with a listener that for click events
         mPatButton = (Button) findViewById(R.id.button_test1);
@@ -159,6 +140,7 @@ public class ConductTest extends Activity {
                 doTest( PaternityTest.TEST_NAME, true ); // Start the paternity test as the client
             }
         });
+        mPatButton.setVisibility(View.GONE);
         
        /* UNCOMMENT FOR ANCESTRY mAncButton = (Button) findViewById(R.id.button_test2);
         mAncButton.setOnClickListener(new OnClickListener() {
@@ -170,11 +152,13 @@ public class ConductTest extends Activity {
         // Initialize the BluetoothService to perform bluetooth connections
         mMessageService = new BluetoothService(this, mHandler);
         
+        ensureDiscoverable(); //added for the test
         
+        // Commented out for test
         // This may not be appropriate but we initate the diaolog here
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setMessage("Would you like to connect to another device now?").setPositiveButton("Yes", connectDialogClickListener)
-            .setNegativeButton("No", connectDialogClickListener).show();
+        //AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        //builder.setMessage("Would you like to connect to another device now?").setPositiveButton("Yes", connectDialogClickListener)
+        //    .setNegativeButton("No", connectDialogClickListener).show();
     }
 
 	
@@ -193,23 +177,34 @@ public class ConductTest extends Activity {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        // Stop the Bluetooth chat services
-        if (mMessageService != null) mMessageService.stop();
+        
         if(D) Log.e(TAG, "--- ON DESTROY ---");
+        
+        // TODO: What if the system kills the mMessageService
+        // Stop the Bluetooth chat services
+        if (mMessageService != null) {
+        	mMessageService.stop();
+        	mMessageService = null;
+        }
         
         // Kill the testing service
         PaternityTest.stop();
         AncestryTest.stop(); // TODO: Fix this
+        
+        if(testIndicator != null) testIndicator.dismiss();
+        if(connectionIndicator != null) connectionIndicator.dismiss();
     }
     
     private void ensureDiscoverable() {
         if(D) Log.d(TAG, "ensure discoverable");
-        if (mBluetoothAdapter.getScanMode() !=
-            BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
+        
+        // Commented out for test
+        //if (mBluetoothAdapter.getScanMode() !=
+        //    BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
             Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
             discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
-            startActivity(discoverableIntent);
-        }
+            startActivityForResult(discoverableIntent, REQUEST_DISCOVERABLE);
+        //}
     }
     
     
@@ -229,22 +224,43 @@ public class ConductTest extends Activity {
             return;
         }
 
-        // TODO: Display an indicator that the test is taking place
+        // Display an indicator that the test is taking place
+        testIndicator = ProgressDialog.show(this, "", "");
         
-        // TODO: think about converting to ints and using a switch
-        String result;
-        if(test.equals(AncestryTest.TEST_NAME)){
-        	result = AncestryTest.conductTest(mMessageService, asClient);
-        }
-        else if(test.equals(PaternityTest.TEST_NAME)){
-        	result = PaternityTest.conductTest(mMessageService, asClient);
-        }
-        else{
-        	Log.e(TAG, "Test name not recognized: " + test);
-        	return;
-        }
-        
-        displayResult(result);
+        (new PerformTestThread(test, asClient)).start();
+    }
+    
+    // Our test may take a while let it run in a different thread TODO: Think about using an async task
+    class PerformTestThread extends Thread {
+    	private String mTest;
+    	private boolean mClient;
+    	private String result;
+    	public PerformTestThread(String test, boolean asClient){
+    		mTest = test;
+    		mClient = asClient;
+    	}
+    	
+    	public void run(){ 
+    		// TODO: think about converting to ints and using a switch
+            if(mTest.equals(AncestryTest.TEST_NAME)){
+            	result = AncestryTest.conductTest(mMessageService, mClient);
+            }
+            else if(mTest.equals(PaternityTest.TEST_NAME)){
+            	result = PaternityTest.conductTest(mMessageService, mClient);
+            }
+            else{
+            	Log.e(TAG, "Test name not recognized: " + mTest);
+            	return;
+            }
+            
+    		runOnUiThread(new Runnable(){
+				public void run() {
+					testIndicator.dismiss();
+	                displayResult(result);
+				}
+    			
+    		});
+    	}
     }
     
     /**
@@ -252,14 +268,23 @@ public class ConductTest extends Activity {
      */
     private void displayResult(String m) {
     	if(m == null)
-    		mMessageLogArrayAdapter.add(getString(R.string.something_went_wrong));//TODO: something went wrong tell the user (use a resource string)
+    		m = getString(R.string.something_went_wrong);//TODO: something went wrong tell the user(and don't exit)
     	
     	////////// TEST CODE //////////////////
     	// Here we just add the result to the message adapter to look at later
-    	mMessageLogArrayAdapter.add(m);
+    	//mMessageLogArrayAdapter.add(m);
     	
     	///////////////////////////////////////
     	
+    	AlertDialog.Builder builder = new AlertDialog.Builder(this);
+    	//builder.setView(myMsg);
+    	builder.setMessage(m);
+    	builder.setPositiveButton("EXIT", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+            	ConductTest.this.finish();     
+            }
+    	});
+    	builder.show();
     }
 
     // Name of the connected device
@@ -267,7 +292,7 @@ public class ConductTest extends Activity {
     
     // CALLBACKS
     
-    // What do do when the connect to device activity is called
+    // What do do when the connect to device dialogue returns
     DialogInterface.OnClickListener connectDialogClickListener = new DialogInterface.OnClickListener() {
         public void onClick(DialogInterface dialog, int which) {
             Intent serverIntent = null;
@@ -302,14 +327,20 @@ public class ConductTest extends Activity {
                 if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
                 switch (msg.arg1) {
                 case BluetoothService.STATE_CONNECTED:
-                    //setStatus(getString(R.string.title_connected_to, mConnectedDeviceName));
+                	finishActivity( REQUEST_CONNECT_DEVICE_SECURE );
+                    
+                	//setStatus(getString(R.string.title_connected_to, mConnectedDeviceName));
+                	
+                	mPatButton.setVisibility(View.VISIBLE);
+                	
+                	if(connectionIndicator != null) connectionIndicator.dismiss();
                     break;
                 case BluetoothService.STATE_CONNECTING:
                     //setStatus(R.string.title_connecting);
                     break;
                 case BluetoothService.STATE_LISTEN:
                 case BluetoothService.STATE_NONE:
-                	//TODO: Kill test and discconect from service?
+                	//TODO: Kill test and disconnect from service?
                     //setStatus(R.string.title_not_connected);
                     break;
                 }
@@ -367,6 +398,16 @@ public class ConductTest extends Activity {
                 Toast.makeText(this, R.string.bt_not_enabled_leaving, Toast.LENGTH_SHORT).show();
                 finish();
             }
+        case REQUEST_DISCOVERABLE:
+        	//TODO: think about what if the user presses no?
+        	if( resultCode == RESULT_CANCELED ){
+        		// for now we do nothing
+        	}
+        	else {
+	        	// Launch the DeviceListActivity to see devices and do scan
+	            Intent serverIntent = new Intent(this, DeviceList.class);
+	            startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
+        	}
         }
     }
     
@@ -382,7 +423,7 @@ public class ConductTest extends Activity {
         Intent serverIntent = null;
         switch (item.getItemId()) {
         case R.id.secure_connect_scan:
-            // Launch the DeviceListActivity to see devices and do scan
+        	// Launch the DeviceListActivity to see devices and do scan
             serverIntent = new Intent(this, DeviceList.class);
             startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
             return true;
@@ -395,6 +436,8 @@ public class ConductTest extends Activity {
     }
     
     private void connectDevice(Intent data, boolean secure) {
+    	connectionIndicator = ProgressDialog.show(this, "", "Please wait while we connect you.");
+    	
         // Get the device MAC address
         String address = data.getExtras()
             .getString(DeviceList.EXTRA_DEVICE_ADDRESS);

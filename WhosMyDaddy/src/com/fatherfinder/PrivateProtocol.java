@@ -20,6 +20,7 @@ import android.util.Log;
  *
  */
 
+
 // This class provides the utilities needed for the other types of protocols
 public abstract class PrivateProtocol extends Service {
 	// Debugging
@@ -32,6 +33,10 @@ public abstract class PrivateProtocol extends Service {
     public static final String ACK_START_MESSAGE = "ACK_START";
     
     protected StopWatch stopwatch;
+    
+    // Exceptions
+    @SuppressWarnings("serial")
+	class DoubleClientException extends Exception{}
     
 	/**
      * Class for clients to access.  Because we know this service always
@@ -79,19 +84,36 @@ public abstract class PrivateProtocol extends Service {
      */
     public String conductTest(String testName, BluetoothService s, boolean client, List<String> inputSet) {
     	String ret = null;
-    			
+    	
     	//Switch to synchronous message reading. 
     	s.setReadLoop(false); // this may take a message to take affect
     	
     	try{
-    		//TODO: Simplify protocol if messages are guaranteed (they may not be)
-	    	if(client){
-	    		initiateClient(testName, s);
-	    		ret= conductClientTest(s, inputSet);
-	    	}
-	    	else{
-	    		initiateServer(testName, s);
-	    		ret = conductServerTest(s, inputSet);
+	    	//TODO: This loop is a huge hack in order to ensure devices get connected
+	    	while(ret == null){
+		    	try{
+		    		//TODO: Simplify protocol if messages are guaranteed (they may not be)
+			    	if(client){
+			    		initiateClient(testName, s);
+			    		ret= conductClientTest(s, inputSet);
+			    	}
+			    	else{
+			    		initiateServer(testName, s);
+			    		ret = conductServerTest(s, inputSet);
+			    	}
+		    	}
+		    	catch(DoubleClientException e){
+		    		Log.i(TAG, "Both users clicked at the same time");
+		    		
+		    		//TODO: Don't use flow control here
+		    		//TODO: one user can be forced to always be the server and thus never learn the result
+		    		//          to fix this security issue simply ensure the one who clicks is always the server
+		    		//TODO: both users could currently switch to server with probability .1*.1
+		    		//          to fix this we should have them flip again, but maybe there is a better way
+		    		client = !client;
+		    		
+		    	}
+		    	
 	    	}
     	}
     	finally {
@@ -138,7 +160,7 @@ public abstract class PrivateProtocol extends Service {
     }
     
     // Tell the server we are listening
-    private void initiateClient(String testName, BluetoothService s){
+    private void initiateClient(String testName, BluetoothService s) throws DoubleClientException{
     	// Say hello
     	s.write(START_TEST_MESSAGE + SEPERATOR + testName);
 
@@ -153,6 +175,14 @@ public abstract class PrivateProtocol extends Service {
     		else if(read.equals(ACK_START_MESSAGE)) { //TODO: Should we look for which test was started as well?
     			s.write(ACK_START_MESSAGE);
     			break;
+    		}
+    		// A bit hacky but a way to get around us both clicking start
+    		else if(read.equals(START_TEST_MESSAGE + SEPERATOR + testName)){
+    			if( Math.random() > 0.9 ){
+    				throw new DoubleClientException();
+    			}
+    			Log.i(TAG, "Start recieved from client");
+    			s.write(START_TEST_MESSAGE + SEPERATOR + testName);
     		}
     		else { //We didn't hear the ack resend.
     			if(D) Log.d(TAG, "Garbage was recieved" + read);

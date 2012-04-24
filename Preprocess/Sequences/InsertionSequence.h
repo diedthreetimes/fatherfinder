@@ -31,6 +31,7 @@ class InsertionSequence : public BamSequence {
 
  protected:
   virtual char calc_position(int i);
+  virtual bool filter(BamTools::BamAlignment align);
   
 };
 #endif //_INSERTION_SEQUENCE_H

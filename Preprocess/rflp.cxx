@@ -3,7 +3,6 @@
 #include <vector>
 #include <iostream>
 #include <Sequence.h>
-// #include <Marker.h>
 #include <Enzyme.h>
 #include <BamSequence.h>
 #include <StringSequence.h>

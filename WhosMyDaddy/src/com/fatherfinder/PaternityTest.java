@@ -62,7 +62,8 @@ public class PaternityTest {
 		getInstance().doStop();
 	}
 	
-	public static String conductTest(BluetoothService messengerService, boolean isClient){
+
+	public synchronized static String conductTest(BluetoothService messengerService, boolean isClient){
 		return getInstance().doTest(messengerService, isClient);
 	}
 	

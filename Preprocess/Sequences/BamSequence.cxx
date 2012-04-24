@@ -52,7 +52,7 @@ void BamSequence::init()
   cur_pos = m_alignments.back().Position;
   m_cur = calc_position(cur_pos);
  
-  //read_all = false;
+  read_all = false; // This is required
   //cur_pos = -1;
   //next();
 
@@ -121,9 +121,7 @@ char BamSequence::calc_position(int i)
   // While we don't have every alignment containing i add alignments
   while( !read_all && (m_alignments.size() == 0 ||  m_alignments.back().Position <= i) ){
     m_alignments.push_back( BamTools::BamAlignment() );
-    
-    //if(cur_pos % 100000 == 0)
-    //  std::cout << "push" << cur_pos << std::endl;
+
     if( m_reader.GetNextAlignment(m_alignments.back()) == false ){
       read_all = true;
       std::cout << "Setting read_all" << std::endl;

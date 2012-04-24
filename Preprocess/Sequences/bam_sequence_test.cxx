@@ -70,14 +70,14 @@ TEST(BamSequenceTest, DISABLED_rewind){
 TEST(BamSequenceTest, DISABLED_next){
 
   //TODO: This used to be working what has changed?!
-
+  //         It has soemthing to do with read_all = false in init
   // Make sure we can traverse a few alignments without error
   std::vector<std::string> files;
   files.push_back(DATA + "test_seq.bam");
   files.push_back(DATA + "test_seq2.bam");
   BamSequence real(files);
   for(int i=0; i < 9993; i++)
-    EXPECT_EQ('D', real.next()) << "Read " << i + 1 << " has no D. Position: " << real.Position();
+    EXPECT_EQ('D', real.next()) << "Read " << i + 1 << " has no D. Position: " << real.Position(); // TODO: Why are these D?
   
   for(int i=0; i < 1000; i++)
     EXPECT_NE('\0', real.next()) << "Read " << i + 1 << " has found null. Position: " << real.Position();

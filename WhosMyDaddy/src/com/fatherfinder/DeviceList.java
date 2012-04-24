@@ -23,7 +23,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.AdapterView.OnItemClickListener;
 
-//TODO: FIX the UI for this activity (Bionic only).
+//TODO: FIX the UI for this activity
 
 
 /**
@@ -69,7 +69,6 @@ public class DeviceList extends Activity {
         Button scanButton = (Button) findViewById(R.id.button_scan);
         scanButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
-            	ensureDiscoverable(); //TODO: This may make a device unecessarily discoverable
                 doDiscovery();
                 v.setVisibility(View.GONE);
             }
@@ -111,9 +110,16 @@ public class DeviceList extends Activity {
                 mPairedDevicesArrayAdapter.add(device.getName() + "\n" + device.getAddress());
             }
         } else {
-            String noDevices = getResources().getText(R.string.none_paired).toString();
-            mPairedDevicesArrayAdapter.add(noDevices);
+        	//TODO: Clicking this causes a crash
+        	// Commented out for test
+            //String noDevices = getResources().getText(R.string.none_paired).toString();
+            //mPairedDevicesArrayAdapter.add(noDevices);
         }
+        
+        
+        // Added for the test only
+        doDiscovery();
+        scanButton.setVisibility(View.GONE);
 	}
 	
 	@Override
@@ -193,21 +199,12 @@ public class DeviceList extends Activity {
                 setProgressBarIndeterminateVisibility(false);
                 setTitle(R.string.select_device);
                 if (mNewDevicesArrayAdapter.getCount() == 0) {
-                    String noDevices = getResources().getText(R.string.none_found).toString();
-                    mNewDevicesArrayAdapter.add(noDevices);
+                	//TODO: Clicking this string causes a crash
+                	// commented for test
+                    //String noDevices = getResources().getText(R.string.none_found).toString();
+                    //mNewDevicesArrayAdapter.add(noDevices);
                 }
             }
         }
     };
-    
-    private void ensureDiscoverable() {
-        if(D) Log.d(TAG, "ensure discoverable");
-        if (mBtAdapter.getScanMode() !=
-            BluetoothAdapter.SCAN_MODE_CONNECTABLE_DISCOVERABLE) {
-            Intent discoverableIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
-            discoverableIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, 300);
-            startActivity(discoverableIntent);
-        }
-    }
-	
 }

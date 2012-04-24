@@ -16,11 +16,8 @@ char InsertionSequence::calc_position(int i)
   while( !read_all && (m_alignments.size() == 0 ||  m_alignments.back().Position <= i) ){
     m_alignments.push_back( BamTools::BamAlignment() );
     
-    //if(cur_pos % 100000 == 0)
-    //  std::cout << "push" << cur_pos << std::endl;
     if( m_reader.GetNextAlignment(m_alignments.back()) == false ){
       read_all = true;
-      std::cout << "Setting read_all" << std::endl;
     }
   }
   
@@ -30,12 +27,20 @@ char InsertionSequence::calc_position(int i)
   // Find all alignments containing position i
   //std::string sum = "D";
   std::map<char, int> hash;
+  char vote;
   for(int j=0; j < m_alignments.size(); j++){
     if( m_alignments[j].Position + m_alignments[j].AlignedBases.length() -1 < i || m_alignments[j].Position > i)
       break;
 
     int bp_idx = i - m_alignments[j].Position;
-    hash[m_alignments[j].AlignedBases[ bp_idx ]]++; 
+    
+    vote = m_alignments[j].AlignedBases[ bp_idx ];
+    
+    if(filter(m_alignments[j])){
+      vote = SKIP_CHAR;
+    }
+
+    hash[vote]++; 
   }
 
   
@@ -63,4 +68,10 @@ char InsertionSequence::next()
   }while(n == SKIP_CHAR);
 
   return n;
+}
+
+
+bool InsertionSequence::filter(BamTools::BamAlignment align){
+  //TODO:
+  return false;
 }
