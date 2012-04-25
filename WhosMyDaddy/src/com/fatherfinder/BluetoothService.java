@@ -62,6 +62,7 @@ public class BluetoothService {
     public static final int STATE_LISTEN = 1;     // now listening for incoming connections
     public static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
     public static final int STATE_CONNECTED = 3;  // now connected to a remote device
+    public static final int STATE_STOPPED = 4;   // we're shutting things down
     
     // Message types sent to mHandler
     public static final int MESSAGE_STATE_CHANGE = 1;
@@ -199,6 +200,7 @@ public class BluetoothService {
      */
     public synchronized void stop() {
         if (D) Log.d(TAG, "stop");
+        setState(STATE_STOPPED);
 
         if (mConnectThread != null) {
             mConnectThread.cancel();
@@ -214,8 +216,6 @@ public class BluetoothService {
             mSecureAcceptThread.cancel();
             mSecureAcceptThread = null;
         }
-        
-        setState(STATE_NONE);
     }
     
     /**
@@ -304,7 +304,8 @@ public class BluetoothService {
         mHandler.sendMessage(msg);
 
         // Start the service over to restart listening mode
-        BluetoothService.this.start();
+        if(getState() != STATE_STOPPED)
+        	BluetoothService.this.start();
     }
     
     /**
@@ -319,7 +320,8 @@ public class BluetoothService {
         mHandler.sendMessage(msg);
 
         // Start the service over to restart listening mode
-        BluetoothService.this.start();
+        if(getState() != STATE_STOPPED)
+        	BluetoothService.this.start();
     }
     
     /**
@@ -596,8 +598,6 @@ public class BluetoothService {
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
                     connectionLost();
-                    // Start the service over to restart listening mode
-                    BluetoothService.this.start();
                     break;
                 }
         	}

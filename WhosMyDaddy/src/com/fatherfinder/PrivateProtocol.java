@@ -110,6 +110,7 @@ public abstract class PrivateProtocol extends Service {
 		    		//          to fix this security issue simply ensure the one who clicks is always the server
 		    		//TODO: both users could currently switch to server with probability .1*.1
 		    		//          to fix this we should have them flip again, but maybe there is a better way
+		    		//TODO:
 		    		client = !client;
 		    		
 		    	}
@@ -178,11 +179,11 @@ public abstract class PrivateProtocol extends Service {
     		}
     		// A bit hacky but a way to get around us both clicking start
     		else if(read.equals(START_TEST_MESSAGE + SEPERATOR + testName)){
-    			if( Math.random() > 0.9 ){
-    				throw new DoubleClientException();
-    			}
     			Log.i(TAG, "Start recieved from client");
     			s.write(START_TEST_MESSAGE + SEPERATOR + testName);
+    			if( Math.random() > 0.9 ){ // TODO: send a random and compare instead
+    				throw new DoubleClientException();
+    			}
     		}
     		else { //We didn't hear the ack resend.
     			if(D) Log.d(TAG, "Garbage was recieved" + read);

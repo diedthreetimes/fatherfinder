@@ -1,12 +1,19 @@
 package com.fatherfinder;
 
+import java.io.IOException;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -91,13 +98,73 @@ public class ConductTest extends Activity {
             finish();
             return;
         }
+        
+        if (mHandler == null){
+        	if(D) Log.e(TAG, "mHandler is null. Initializing");
+        	mHandler = new Handler() {
+                @Override
+                public void handleMessage(Message msg) {
+                    switch (msg.what) {
+                    case   BluetoothService.MESSAGE_STATE_CHANGE:
+                        if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
+                        switch (msg.arg1) {
+                        case BluetoothService.STATE_CONNECTED:
+                        	finishActivity( REQUEST_CONNECT_DEVICE_SECURE );
+                            
+                        	//setStatus(getString(R.string.title_connected_to, mConnectedDeviceName));
+                        	
+                        	mPatButton.setVisibility(View.VISIBLE);
+                        	
+                        	if(connectionIndicator != null) connectionIndicator.dismiss();
+                            break;
+                        case BluetoothService.STATE_CONNECTING:
+                            //setStatus(R.string.title_connecting);
+                            break;
+                        case BluetoothService.STATE_LISTEN:
+                        case BluetoothService.STATE_NONE:
+                        	//TODO: Kill test and disconnect from service?
+                            //setStatus(R.string.title_not_connected);
+                            break;
+                        }
+                        break;
+                    case BluetoothService.MESSAGE_READ:
+                        byte[] readBuf = (byte[]) msg.obj;
+                        // construct a string from the valid bytes in the buffer
+                        // TODO: resolve the issue where both click conduct test at the same time, and two tests are initiated                
+                        String readMessage = new String(readBuf, 0, msg.arg1);
+                        if(D) Log.d(TAG, "Received the message: " + readMessage);
+                        
+                        String[] parsed_message = readMessage.split(PrivateProtocol.SEPERATOR);
+                        
+                        // TODO: Ask the user if conducting the test is ok
+                        
+                        // TODO: This is hacky, we shouldn't need to be looking at PrivateProtocol
+                        
+                        if(parsed_message.length > 1 && parsed_message[0].equals(PrivateProtocol.START_TEST_MESSAGE)) //TODO: refactor for arbitrary tests
+                        	doTest(parsed_message[1], false);
+                        break;
+                    case BluetoothService.MESSAGE_DEVICE_NAME:
+                        // save the connected device's name
+                        mConnectedDeviceName = msg.getData().getString(BluetoothService.DEVICE_NAME);
+                        Toast.makeText(getApplicationContext(), "Connected to "
+                                       + mConnectedDeviceName, Toast.LENGTH_SHORT).show();
+                        break;
+                    case BluetoothService.MESSAGE_TOAST:
+                        // For the usability test we mute tests
+                    	//Toast.makeText(getApplicationContext(), msg.getData().getString(BluetoothService.TOAST),
+                        //               Toast.LENGTH_SHORT).show();
+                        break;
+                    }
+                }
+            };
+        }
 	}
 	
 	//NOTE: This happens when an activity becomes visible
 	@Override
     public void onStart() {
         super.onStart();
-        if(D) Log.d(TAG, "++ ON START ++");
+        if(D) Log.e(TAG, "++ ON START ++");
 
         // If BT is not on, request that it be enabled.
         // setupChat() will then be called during onActivityResult
@@ -193,6 +260,8 @@ public class ConductTest extends Activity {
         
         if(testIndicator != null) testIndicator.dismiss();
         if(connectionIndicator != null) connectionIndicator.dismiss();
+        
+        if(mHandler != null) mHandler = null;
     }
     
     private void ensureDiscoverable() {
@@ -225,6 +294,7 @@ public class ConductTest extends Activity {
         }
 
         // Display an indicator that the test is taking place
+        if(testIndicator != null) testIndicator.dismiss(); // Tests are asynchronous so make sure we only show one indicator
         testIndicator = ProgressDialog.show(this, "", "");
         
         (new PerformTestThread(test, asClient)).start();
@@ -319,61 +389,7 @@ public class ConductTest extends Activity {
     //}
 
     // The Handler that gets information back from the BluetoothService
-    private final Handler mHandler = new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-            switch (msg.what) {
-            case   BluetoothService.MESSAGE_STATE_CHANGE:
-                if(D) Log.i(TAG, "MESSAGE_STATE_CHANGE: " + msg.arg1);
-                switch (msg.arg1) {
-                case BluetoothService.STATE_CONNECTED:
-                	finishActivity( REQUEST_CONNECT_DEVICE_SECURE );
-                    
-                	//setStatus(getString(R.string.title_connected_to, mConnectedDeviceName));
-                	
-                	mPatButton.setVisibility(View.VISIBLE);
-                	
-                	if(connectionIndicator != null) connectionIndicator.dismiss();
-                    break;
-                case BluetoothService.STATE_CONNECTING:
-                    //setStatus(R.string.title_connecting);
-                    break;
-                case BluetoothService.STATE_LISTEN:
-                case BluetoothService.STATE_NONE:
-                	//TODO: Kill test and disconnect from service?
-                    //setStatus(R.string.title_not_connected);
-                    break;
-                }
-                break;
-            case BluetoothService.MESSAGE_READ:
-                byte[] readBuf = (byte[]) msg.obj;
-                // construct a string from the valid bytes in the buffer
-                // TODO: resolve the issue where both click conduct test at the same time, and two tests are initiated                
-                String readMessage = new String(readBuf, 0, msg.arg1);
-                if(D) Log.d(TAG, "Received the message: " + readMessage);
-                
-                String[] parsed_message = readMessage.split(PrivateProtocol.SEPERATOR);
-                
-                // TODO: Ask the user if conducting the test is ok
-                
-                // TODO: This is hacky, we shouldn't need to be looking at PrivateProtocol
-                
-                if(parsed_message.length > 1 && parsed_message[0].equals(PrivateProtocol.START_TEST_MESSAGE)) //TODO: refactor for arbitrary tests
-                	doTest(parsed_message[1], false);
-                break;
-            case BluetoothService.MESSAGE_DEVICE_NAME:
-                // save the connected device's name
-                mConnectedDeviceName = msg.getData().getString(BluetoothService.DEVICE_NAME);
-                Toast.makeText(getApplicationContext(), "Connected to "
-                               + mConnectedDeviceName, Toast.LENGTH_SHORT).show();
-                break;
-            case BluetoothService.MESSAGE_TOAST:
-                Toast.makeText(getApplicationContext(), msg.getData().getString(BluetoothService.TOAST),
-                               Toast.LENGTH_SHORT).show();
-                break;
-            }
-        }
-    };
+    private Handler mHandler;
     
     //Called when INTENT is returned
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -403,11 +419,10 @@ public class ConductTest extends Activity {
         	if( resultCode == RESULT_CANCELED ){
         		// for now we do nothing
         	}
-        	else {
-	        	// Launch the DeviceListActivity to see devices and do scan
-	            Intent serverIntent = new Intent(this, DeviceList.class);
-	            startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
-        	}
+        	
+	        // Launch the DeviceListActivity to see devices and do scan
+	        Intent serverIntent = new Intent(this, DeviceList.class);
+	        startActivityForResult(serverIntent, REQUEST_CONNECT_DEVICE_SECURE);
         }
     }
     

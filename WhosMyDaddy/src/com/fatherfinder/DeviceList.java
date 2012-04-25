@@ -51,8 +51,8 @@ public class DeviceList extends Activity {
 
     // Member fields
     private BluetoothAdapter mBtAdapter;
-    private ArrayAdapter<String> mPairedDevicesArrayAdapter;
-    private ArrayAdapter<String> mNewDevicesArrayAdapter;
+    private ArrayAdapter<BluetoothItem> mPairedDevicesArrayAdapter;
+    private ArrayAdapter<BluetoothItem> mNewDevicesArrayAdapter;
 	/**
 	 * @see android.app.Activity#onCreate(Bundle)
 	 */
@@ -76,8 +76,8 @@ public class DeviceList extends Activity {
 
         // Initialize array adapters. One for already paired devices and
         // one for newly discovered devices
-        mPairedDevicesArrayAdapter = new ArrayAdapter<String>(this, R.layout.device_name);
-        mNewDevicesArrayAdapter = new ArrayAdapter<String>(this, R.layout.device_name);
+        mPairedDevicesArrayAdapter = new ArrayAdapter<BluetoothItem>(this, R.layout.device_name);
+        mNewDevicesArrayAdapter = new ArrayAdapter<BluetoothItem>(this, R.layout.device_name);
 
         // Find and set up the ListView for paired devices
         ListView pairedListView = (ListView) findViewById(R.id.paired_devices);
@@ -99,15 +99,20 @@ public class DeviceList extends Activity {
 
         // Get the local Bluetooth adapter
         mBtAdapter = BluetoothAdapter.getDefaultAdapter();
+        
+        // Load our devices name
+        ((TextView)findViewById(R.id.display_name)).setText(mBtAdapter.getName());
 
         // Get a set of currently paired devices
         Set<BluetoothDevice> pairedDevices = mBtAdapter.getBondedDevices();
 
+        // TODO: reinstate MAC addresses
+        
         // If there are paired devices, add each one to the ArrayAdapter
         if (pairedDevices.size() > 0) {
             findViewById(R.id.title_paired_devices).setVisibility(View.VISIBLE);
             for (BluetoothDevice device : pairedDevices) {
-                mPairedDevicesArrayAdapter.add(device.getName() + "\n" + device.getAddress());
+                mPairedDevicesArrayAdapter.add(new BluetoothItem(device.getName(), device.getAddress()));
             }
         } else {
         	//TODO: Clicking this causes a crash
@@ -161,17 +166,15 @@ public class DeviceList extends Activity {
     
     // The on-click listener for all devices in the ListViews
     private OnItemClickListener mDeviceClickListener = new OnItemClickListener() {
-        public void onItemClick(AdapterView<?> av, View v, int arg2, long arg3) {
+        public void onItemClick(AdapterView<?> av, View v, int position, long id) {
             // Cancel discovery because it's costly and we're about to connect
             mBtAdapter.cancelDiscovery();
-
-            // Get the device MAC address, which is the last 17 chars in the View
-            String info = ((TextView) v).getText().toString();
-            String address = info.substring(info.length() - 17);
+            
+            BluetoothItem device = (BluetoothItem) av.getItemAtPosition(position);
 
             // Create the result Intent and include the MAC address
             Intent intent = new Intent();
-            intent.putExtra(EXTRA_DEVICE_ADDRESS, address);
+            intent.putExtra(EXTRA_DEVICE_ADDRESS, device.getDeviceAddress());
 
             // Set result and finish this Activity
             setResult(Activity.RESULT_OK, intent);
@@ -192,7 +195,7 @@ public class DeviceList extends Activity {
                 BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                 // If it's already paired, skip it, because it's been listed already
                 if (device.getBondState() != BluetoothDevice.BOND_BONDED) {
-                    mNewDevicesArrayAdapter.add(device.getName() + "\n" + device.getAddress());
+                    mNewDevicesArrayAdapter.add(new BluetoothItem(device.getName(), device.getAddress()));
                 }
             // When discovery is finished, change the Activity title
             } else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
@@ -207,4 +210,26 @@ public class DeviceList extends Activity {
             }
         }
     };
+    
+    private class BluetoothItem {
+    	private String mDeviceName;
+		private String mDeviceAddress;
+
+		public BluetoothItem(String deviceName, String deviceAddress){
+    		mDeviceName = deviceName;
+    		mDeviceAddress = deviceAddress;
+    	}
+    	
+    	public String toString(){
+    		return mDeviceName;
+    	}
+    	
+    	public String getDeviceName(){
+    		return mDeviceName;
+    	}
+    	
+    	public String getDeviceAddress(){
+    		return mDeviceAddress;
+    	}
+    }
 }

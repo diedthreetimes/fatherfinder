@@ -7,6 +7,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.ServiceConnection;
+import android.content.res.Resources;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -125,12 +126,18 @@ public class PaternityTest {
 	private String doTest(BluetoothService messageService, boolean isClient){
 		if(D) Log.d(TAG, "Starting a paternity test with " + isClient);
          
-		int common_markers = Integer.valueOf(mTestService.conductTest(TEST_NAME, messageService, isClient, getMarkerLengths()));
+		int common_markers = 0;
+		try{
+			common_markers = Integer.valueOf(mTestService.conductTest(TEST_NAME, messageService, isClient, getMarkerLengths()));
+		}catch(NumberFormatException e){
+			Log.e(TAG, e.toString() + "\n" + e.getStackTrace()); //TODO: Fix the issue when we get invalid input becasue two tests are started at the same time
+		}
         
+		//TODO: Make these resources
 		if(common_markers > THRESHOLD)
-			return "Congratulations! You are related";
+			return "The result of the test indicates that the participants are parent and child.";
 		else
-			return "Unfortunetly, you are not related :(";
+			return "The result of the test indicates that the participants are not parent and child.";
 	}
 	
 	private List<String> getMarkerLengths(){
@@ -139,7 +146,12 @@ public class PaternityTest {
     	//int[] markerLengths = {1,2,3,4,5};
     	//String[] markerNames = {"Mark1","secondMarker","MarkNumber3", "Mark4", "Mark5"};
     	int[] markerLengths = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25};
+    	
+    	// Randomize the inputs
     	markerLengths[1] = (int) (Math.random()*100.0);
+    	markerLengths[2] = (int) (Math.random()*2);
+    	markerLengths[3] = (int) (Math.random()*2);
+    	
     	String[] markerNames = {"Mark1","SecondMarker","MarkNumber3","Mark4","Mark5","Mark6","Mark7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25"};
     	List<String> ret = new ArrayList<String>();
     	
