@@ -1,33 +1,22 @@
 package com.fatherfinder;
 
-import java.io.IOException;
-
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.media.AudioManager;
-import android.media.MediaPlayer;
-import android.media.RingtoneManager;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
-import android.widget.ListView;
-import android.widget.TextView;
 import android.widget.Toast;
 
 /*
@@ -122,7 +111,6 @@ public class ConductTest extends Activity {
                             break;
                         case BluetoothService.STATE_LISTEN:
                         case BluetoothService.STATE_NONE:
-                        	//TODO: Kill test and disconnect from service?
                             //setStatus(R.string.title_not_connected);
                             break;
                         }
@@ -220,12 +208,6 @@ public class ConductTest extends Activity {
         mMessageService = new BluetoothService(this, mHandler);
         
         ensureDiscoverable(); //added for the test
-        
-        // Commented out for test
-        // This may not be appropriate but we initate the diaolog here
-        //AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        //builder.setMessage("Would you like to connect to another device now?").setPositiveButton("Yes", connectDialogClickListener)
-        //    .setNegativeButton("No", connectDialogClickListener).show();
     }
 
 	

@@ -6,7 +6,7 @@ package com.fatherfinder;
  */
 
 //TODO: benchmark (figure out what is slowing down) this new method of encoding vs string encoding (this may be a GC issue)
-
+//          This may also be due to the overhead of using objectstream see http://stackoverflow.com/questions/2251051/performance-issue-using-javas-object-streams-with-sockets
 //TODO: Double check that secure implies encryption and not just authentication
 
 import java.io.DataInputStream;
