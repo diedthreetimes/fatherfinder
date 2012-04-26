@@ -6,6 +6,7 @@ import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.content.DialogInterface;
+import android.content.DialogInterface.OnCancelListener;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
@@ -51,12 +52,20 @@ public class ConductTest extends Activity {
     private static final int REQUEST_CONNECT_DEVICE_SECURE = 1;
     private static final int REQUEST_ENABLE_BT = 3; //TODO: Refactor this out
     private static final int REQUEST_DISCOVERABLE = 4;
+    
+    // Start Message
+    private static final String TEST_OK = "READY";
 
     //TODO: Change these layouts to be buttons that say (conduct test)
     //     and then display the results
     // Layout Views
     private Button mPatButton;
     private Button mAncButton;
+    
+    // Has the user/other user agreed to the test? //TODO: Can we just use a single flag
+    private boolean mStartTest = false;
+    private boolean mOtherStartTest = false;
+    private boolean mTestIsRunning = false; //TODO: think about using a state machine? or just have a single perform thread
     
     private ProgressDialog testIndicator;
     private ProgressDialog connectionIndicator;
@@ -133,7 +142,31 @@ public class ConductTest extends Activity {
         mPatButton = (Button) findViewById(R.id.button_test1);
         mPatButton.setOnClickListener(new OnClickListener() {
             public void onClick(View v) {
-                doTest( PaternityTest.TEST_NAME, true ); // Start the paternity test as the client
+                // Check that we're actually connected before trying anything
+                if (mMessageService.getState() != BluetoothService.STATE_CONNECTED) {
+                    Toast.makeText(ConductTest.this, R.string.not_connected, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            	
+            	mStartTest = true;
+            	if(D) Log.d(TAG,"mStartTest: true");
+            	
+            	mMessageService.write(TEST_OK);
+            	
+            	// Are they are ready?
+            	if(mOtherStartTest){
+            		doTest( PaternityTest.TEST_NAME, true ); // Start the paternity test as the client
+            	}
+            	else{
+            		if(testIndicator != null) testIndicator.dismiss(); // Tests are asynchronous so make sure we only show one indicator
+            		testIndicator = ProgressDialog.show(ConductTest.this, "", "Waiting for the other party to start the test...", true, true);
+            		testIndicator.setOnCancelListener(new OnCancelListener(){
+						public void onCancel(DialogInterface dialog) {
+							mStartTest = false;
+							if(D) Log.d(TAG,"mStartTest: false");
+						}
+            		});
+            	}
             }
         });
         mPatButton.setVisibility(View.GONE);
@@ -205,20 +238,16 @@ public class ConductTest extends Activity {
      */
     // This will fire off the desired test service and connect it to the chosen device
     private void doTest(String test, boolean asClient) {
+    	if(D) Log.e(TAG, "START TEST: " + test + ". As client? " + asClient);
     	// TODO: Make less bluetooth specific perhaps by housing connection information inside
     	//       of the service
-    	
-        // Check that we're actually connected before trying anything
-        if (mMessageService.getState() != BluetoothService.STATE_CONNECTED) {
-            Toast.makeText(this, R.string.not_connected, Toast.LENGTH_SHORT).show();
-            return;
-        }
 
         // Display an indicator that the test is taking place
         if(testIndicator != null) testIndicator.dismiss(); // Tests are asynchronous so make sure we only show one indicator
         testIndicator = ProgressDialog.show(this, "", "");
         
-        (new PerformTestThread(test, asClient)).start();
+        if(!mTestIsRunning)
+        	(new PerformTestThread(test, asClient)).start();
     }
     
     // Our test may take a while let it run in a different thread TODO: Think about using an async task
@@ -232,6 +261,8 @@ public class ConductTest extends Activity {
     	}
     	
     	public void run(){ 
+    		if(D) Log.d(TAG, "Inside the perform thread");
+    		mTestIsRunning = true;
     		// TODO: think about converting to ints and using a switch
             if(mTest.equals(AncestryTest.TEST_NAME)){
             	result = AncestryTest.conductTest(mMessageService, mClient);
@@ -246,6 +277,7 @@ public class ConductTest extends Activity {
             
     		runOnUiThread(new Runnable(){
 				public void run() {
+					mTestIsRunning = false;
 					testIndicator.dismiss();
 	                displayResult(result);
 				}
@@ -325,6 +357,10 @@ public class ConductTest extends Activity {
                 	mPatButton.setVisibility(View.VISIBLE);
                 	
                 	if(connectionIndicator != null) connectionIndicator.dismiss();
+                	
+                	mOtherStartTest = false;
+                	mStartTest = false;
+                	if(D) Log.d(TAG,"mStartTest + mOther: false");
                     break;
                 case BluetoothService.STATE_CONNECTING:
                     //setStatus(R.string.title_connecting);
@@ -344,11 +380,24 @@ public class ConductTest extends Activity {
                 
                 String[] parsed_message = readMessage.split(PrivateProtocol.SEPERATOR);
                 
-                // TODO: Ask the user if conducting the test is ok
                 
                 // TODO: This is hacky, we shouldn't need to be looking at PrivateProtocol
+                //         Maybe we can incorporate which test we would like to start in the TEST_OK message instead
                 
-                if(parsed_message.length > 1 && parsed_message[0].equals(PrivateProtocol.START_TEST_MESSAGE)) //TODO: refactor for arbitrary tests
+                if(readMessage.equals(TEST_OK)){
+                	mOtherStartTest = true;
+                	if(D) Log.d(TAG,"mOtherStartTest: true");
+                	
+                	//TODO: This is another hack to resolve duplicate pressed states
+                	//       we may want to remove double press resolution in the protocol and move it here (being this class)
+                	
+                	if(mStartTest){
+                		if(D) Log.e(TAG, "Double press detected!!");
+                		doTest(PaternityTest.TEST_NAME, true); //TODO: How do we know which test if we have multiple
+                	}
+                }
+                
+                if(mStartTest && parsed_message.length > 1 && parsed_message[0].equals(PrivateProtocol.START_TEST_MESSAGE)) //TODO: refactor for arbitrary tests
                 	doTest(parsed_message[1], false);
                 break;
             case BluetoothService.MESSAGE_DEVICE_NAME:
