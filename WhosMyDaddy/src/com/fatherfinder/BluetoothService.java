@@ -37,7 +37,7 @@ import android.util.Log;
 public class BluetoothService {	
 	// Debugging
     private static final String TAG = "BluetoothService";
-    private static final boolean D = false;
+    private static final boolean D = true;
     
     // Name for the SDP record when creating server socket
     private static final String NAME_SECURE = "GenomicTestSecure";
@@ -49,6 +49,9 @@ public class BluetoothService {
     private static final UUID MY_UUID_INSECURE = // Secure threads are not allowed but left for debugging
             UUID.fromString("8ce255c0-200a-11e0-ac64-0800200c9a66"); // PROBABLY NOT UNIQ
     
+    // Maximum reconnect attempts
+    private static final int MAX_RETRY = 2;
+    
 	// Member fields
     private final BluetoothAdapter mAdapter;
     private Handler mHandler;
@@ -56,6 +59,9 @@ public class BluetoothService {
     private ConnectThread mConnectThread;
     private ConnectedThread mConnectedThread;
     private int mState;
+    private int mNumTries;
+	private BluetoothDevice mDevice;
+	private boolean mSecure;
     
 	// Constants that indicate the current connection state
     public static final int STATE_NONE = 0;       // we're doing nothing
@@ -63,6 +69,7 @@ public class BluetoothService {
     public static final int STATE_CONNECTING = 2; // now initiating an outgoing connection
     public static final int STATE_CONNECTED = 3;  // now connected to a remote device
     public static final int STATE_STOPPED = 4;   // we're shutting things down
+    public static final int STATE_RETRY = 5;      // we are going to retry, but first we listen
     
     // Message types sent to mHandler
     public static final int MESSAGE_STATE_CHANGE = 1;
@@ -70,6 +77,7 @@ public class BluetoothService {
     public static final int MESSAGE_WRITE = 3;
     public static final int MESSAGE_DEVICE_NAME = 4;
     public static final int MESSAGE_TOAST = 5;
+    public static final int MESSAGE_FAILED = 6;
     
     // Key names sent to mHandler
     public static final String DEVICE_NAME = "device_name";
@@ -117,19 +125,64 @@ public class BluetoothService {
     public synchronized void start() {
         if (D) Log.d(TAG, "start");
 
-        // Cancel any thread attempting to make a connection
+        startAcceptThread();
+
+        mNumTries = 0;
+        
+        setState(STATE_LISTEN);
+    }
+    
+    private synchronized void startAcceptThread() {
+    	// Cancel any thread attempting to make a connection
         if (mConnectThread != null) {mConnectThread.cancel(); mConnectThread = null;}
 
         // Cancel any thread currently running a connection
         if (mConnectedThread != null) {mConnectedThread.cancel(); mConnectedThread = null;}
-
-        setState(STATE_LISTEN);
-
-        // Start the thread to listen on a BluetoothServerSocket
+    	
+    	// Start the thread to listen on a BluetoothServerSocket
         if (mSecureAcceptThread == null) {
             mSecureAcceptThread = new AcceptThread(true);
             mSecureAcceptThread.start();
         }
+    }
+    
+    private synchronized void retry() {
+    	if(D) Log.d(TAG, "retry");
+    	
+    	if(D) Log.d(TAG, "Retrying in state: " + getState());
+    	
+    	if(mState == STATE_CONNECTED) return;
+    	
+    	//TODO: Does this logic belong here
+    	if(mNumTries >= MAX_RETRY){
+    		signalFailed();
+    		start();
+    		return;
+    	}
+    	
+    	startAcceptThread();
+    	
+    	setState(STATE_RETRY);
+    	
+    	int sleep = (int) (Math.random()*1000 + 100);
+    	if(D) Log.d(TAG, "Sleeping: " + sleep);
+    	try {
+			Thread.sleep(sleep);
+		} catch (InterruptedException e) {
+			Log.e(TAG, "Sleep interupted");
+		} //TODO: will this block the ui?
+    	
+    	if(D) Log.d(TAG, "Waking up: " + getState());
+    	
+    	// TODO: make this less strict
+    	if( mState != STATE_CONNECTING && mState != STATE_CONNECTED && mConnectedThread == null && mConnectThread == null)
+    		connect(mDevice, mSecure);
+    }
+    
+    //TODO: Maybe this should be somewhere else such as connectionFailed
+    private void signalFailed(){
+    	  Message msg = mHandler.obtainMessage(MESSAGE_FAILED);
+          mHandler.sendMessage(msg);
     }
     
     /**
@@ -145,6 +198,9 @@ public class BluetoothService {
         	return;
         }
         
+        mNumTries++;
+        mDevice = device;
+        mSecure = secure;
 // Commented out for test
 //        // Cancel any thread attempting to make a connection
 //        if (mState == STATE_CONNECTING) {
@@ -305,7 +361,7 @@ public class BluetoothService {
 
         // Start the service over to restart listening mode
         if(getState() != STATE_STOPPED)
-        	BluetoothService.this.start();
+        	BluetoothService.this.retry();
     }
     
     /**
@@ -320,8 +376,10 @@ public class BluetoothService {
         mHandler.sendMessage(msg);
 
         // Start the service over to restart listening mode
-        if(getState() != STATE_STOPPED)
-        	BluetoothService.this.start();
+        if(getState() != STATE_STOPPED){
+            BluetoothService.this.start();
+        }
+        	
     }
     
     /**
@@ -354,8 +412,7 @@ public class BluetoothService {
         }
 
         public void run() {
-            if (D) Log.d(TAG, "Socket Type: " + mSocketType +
-                    "BEGIN mAcceptThread" + this);
+            if(D) Log.i(TAG, "BEGIN mAcceptThread Socket Type: " + mSocketType + this );
             setName("AcceptThread" + mSocketType);
 
             BluetoothSocket socket = null;
