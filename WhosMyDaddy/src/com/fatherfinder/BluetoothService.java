@@ -13,6 +13,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.StreamCorruptedException;
+import java.math.BigInteger;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -37,7 +38,7 @@ import android.util.Log;
 public class BluetoothService {	
 	// Debugging
     private static final String TAG = "BluetoothService";
-    private static final boolean D = true;
+    private static final boolean D = false;
     
     // Name for the SDP record when creating server socket
     private static final String NAME_SECURE = "GenomicTestSecure";
@@ -320,6 +321,10 @@ public class BluetoothService {
         
         if(D) Log.d(TAG, "Read: " + new String(readMessage));
         return readMessage;
+    }
+    
+    public BigInteger readBigInteger(){
+    	return new BigInteger(read());
     }
     
     /**

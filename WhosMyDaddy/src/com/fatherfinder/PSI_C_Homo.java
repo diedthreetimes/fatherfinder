@@ -14,16 +14,17 @@ import android.util.Log;
  *
  */
 
-//TODO: Think about changing protocol so that both use the same key but mask with random bits
+// TODO: Why can't we extend PSI_C
 public class PSI_C_Homo extends PSI_C {
 	
 	// Debugging
-    private final String TAG = "PSI_C";
+    private final String TAG = "Homomorphic PSI-C";
     private final boolean D = true;
     
     private SecureRandom rand;
     
     public void onCreate(){
+    	Log.e(TAG, "+++ ON CREATE +++ ");
     	super.onCreate();
     	rand = new SecureRandom();
     }
@@ -40,7 +41,7 @@ public class PSI_C_Homo extends PSI_C {
     		c2 = two;
     	}
     	
-    	public boolean isEncryptionOfOne(BigInteger key){
+    	public boolean isEncryptionOfZero(BigInteger key){
     		return c1.modPow(key, p).equals(c2);
     	}
     	
@@ -51,20 +52,8 @@ public class PSI_C_Homo extends PSI_C {
     	 */
     	//TODO: should this be unmutable?
     	public Encryption plus(Encryption o){
-    		c1 = c1.add(o.c1);
-    		c2 = c2.add(o.c2);
-    		return this;
-    	}
-    	
-    	/**
-    	 * Subtract other from self
-    	 * @param o other
-    	 * @return self
-    	 */
-    	//TODO: Should this be unmutable?
-    	public Encryption subtract(Encryption o){
-    		c1 = c1.subtract(o.c1);
-    		c2 = c2.subtract(o.c2);
+    		c1 = c1.multiply(o.c1).mod(p);
+    		c2 = c2.multiply(o.c2).mod(p);
     		return this;
     	}
     	
@@ -74,8 +63,8 @@ public class PSI_C_Homo extends PSI_C {
     	 * @return self
     	 */
     	public Encryption mult(BigInteger o){
-    		c1 = c1.multiply(o);
-    		c2 = c2.multiply(o);
+    		c1 = c1.modPow(o,p);
+    		c2 = c2.modPow(o,p);
     		return this;
     	}
     }
@@ -95,11 +84,10 @@ public class PSI_C_Homo extends PSI_C {
     	//TODO: In this encryption scheme what are the restrictions on R's
     	BigInteger h,r,c1,c2;
     	for( String input: inputs ){
-    		h = hash(input);
+    		h = q.subtract(hash(input)).mod(q);
     		
     		// Encrypt h
     		
-    		//TODO: How big must R be?
     		r = new BigInteger(160, rand);
     		// g^r
     		c1 = g.modPow(r,p);
@@ -123,12 +111,19 @@ public class PSI_C_Homo extends PSI_C {
     		s.write(e.c2.toByteArray());
     	}
     	
+    	stopwatch.stop();
+    	Log.i(TAG, "Client send phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
+    	
+    	// Wait for the server to finish offline phase
+    	s.readString();
+    	
+    	stopwatch.start();
     	int numCommon = 0;
     	
     	// Get values from the server and process
     	for(int i = 0; i < Cs.size(); i++){
 
-    		if (new Encryption(s.readBigInteger(), s.readBigInteger()).isEncryptionOfOne(x))
+    		if (new Encryption(s.readBigInteger(), s.readBigInteger()).isEncryptionOfZero(x))
     				numCommon++;
     	}
     	
@@ -149,24 +144,23 @@ public class PSI_C_Homo extends PSI_C {
     	List<BigInteger> rs = new ArrayList<BigInteger>();  // Randomness for encryption later
     	List<BigInteger> r1s = new ArrayList<BigInteger>(); // Randomness for masking later
     	List<BigInteger> c1s = new ArrayList<BigInteger>(); // First half of encryption 
-    	List<BigInteger> hs = new ArrayList<BigInteger>();  // Hashed input
+    	List<BigInteger> ghs = new ArrayList<BigInteger>();  // Hashed input
 
-    	BigInteger r;
+    	BigInteger r, h;
     	
     	for( String input: inputs ){
     		r = new BigInteger(160, rand);
+    		h = hash(input);
     		
     		rs.add(r);
     		r1s.add(new BigInteger(80, rand));
     		c1s.add( g.modPow(r,p) );
-    		hs.add(hash(input));
+    		ghs.add(g.modPow(h,p));
     	}
     	
     	stopwatch.stop();
     	Log.i(TAG, "Server offline phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
-    	
-    	// ONLINE PHASE
-    	stopwatch.start();
+    	s.write("Offline DONE");
     	
     	List<Encryption> es = new ArrayList<Encryption>(); // The set of return encryptions
     	BigInteger y = null;
@@ -176,20 +170,23 @@ public class PSI_C_Homo extends PSI_C {
     	
     	// Start reading client data
     	y = new BigInteger(s.read());
+    	
+    	// ONLINE PHASE
+    	stopwatch.start();
     
     	BigInteger c2;
     	Encryption se, ce;
     	
-    	for(int i = 0; i < hs.size(); i++){
+    	for(int i = 0; i < ghs.size(); i++){
     		// Compute our c2 and encryption
-    		c2 = y.modPow(rs.get(i), p).multiply(g.modPow(hs.get(i),p));
+    		c2 = y.modPow(rs.get(i), p).multiply(ghs.get(i));
     		se = new Encryption(c1s.get(i), c2);
     		
     		// Read a client encryption
     		ce = new Encryption(s.readBigInteger(), s.readBigInteger());
     		
     		// Compute difference and mask
-    		es.add( ce.subtract(se).mult(r1s.get(i)) );
+    		es.add( ce.plus(se).mult(r1s.get(i)) );
     	}
     	Collections.shuffle(es, rand);
     	

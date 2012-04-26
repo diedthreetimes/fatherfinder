@@ -11,6 +11,8 @@
             </intent-filter>
         </activity>
         <service android:name=".PSI_C"/>
+        <service android:name=".PSI_C_Homo"/>
+        <service android:name=".PSI" />
     </application>
     <uses-permission android:name="android.permission.BLUETOOTH"/>
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>

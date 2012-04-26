@@ -81,6 +81,7 @@ public class PaternityTest {
             // interact with the service.  Because we have bound to a explicit
             // service that we know is running in our own process, we can
             // cast its IBinder to a concrete class and directly access it.
+        	if(D) Log.d(TAG, "Service connected");
             mTestService = ((PrivateProtocol.LocalBinder)service).getService();
         }
 
@@ -89,6 +90,7 @@ public class PaternityTest {
             // unexpectedly disconnected -- that is, its proc25ess crashed.
             // Because it is running in our same process, we should never
             // see this happen.
+        	if(D) Log.d(TAG, "Service disconnected");
             mTestService = null;
         }
     };
@@ -124,6 +126,7 @@ public class PaternityTest {
     }
 	
 	private String doTest(BluetoothService messageService, boolean isClient){
+		//TODO: Crash if we haven't finished binding
 		if(D) Log.d(TAG, "Starting a paternity test with " + isClient);
          
 		int common_markers = 0;
