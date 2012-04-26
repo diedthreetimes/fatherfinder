@@ -108,9 +108,6 @@ public abstract class PrivateProtocol extends Service {
 		    		//TODO: Don't use flow control here
 		    		//TODO: one user can be forced to always be the server and thus never learn the result
 		    		//          to fix this security issue simply ensure the one who clicks is always the server
-		    		//TODO: both users could currently switch to server with probability .1*.1
-		    		//          to fix this we should have them flip again, but maybe there is a better way
-		    		//TODO:
 		    		client = !client;
 		    		
 		    	}
@@ -179,10 +176,20 @@ public abstract class PrivateProtocol extends Service {
     		}
     		// A bit hacky but a way to get around us both clicking start
     		else if(read.equals(START_TEST_MESSAGE + SEPERATOR + testName)){
-    			Log.i(TAG, "Start recieved from client");
-    			s.write(START_TEST_MESSAGE + SEPERATOR + testName);
-    			if( Math.random() > 0.9 ){ // TODO: send a random and compare instead
-    				throw new DoubleClientException();
+    			int rand = (int)(Math.random()*1000);
+    			Log.i(TAG, "Start recieved from client: sending rand " + rand);
+    			s.write(START_TEST_MESSAGE + SEPERATOR + testName); // Tell them we are in the double client state
+    			s.write(String.valueOf(rand));
+    			
+    			while(true){ //TODO: Is this dangerous? this solves if they are equal
+	    			while(read.equals(START_TEST_MESSAGE + SEPERATOR + testName)){
+	    				read = s.readString();
+	    			}
+	    			int theirRand = Integer.parseInt(read);
+	    			if( rand > theirRand ){ // TODO: send a random and compare instead
+	    				throw new DoubleClientException();
+	    			}
+	    			break;
     			}
     		}
     		else { //We didn't hear the ack resend.
