@@ -79,6 +79,7 @@ char BamSequence::next()
   cur_pos++;
 
   // While the alignment doesn't contain any new data remove
+  // TODO: Think about how we are getting position look at #GetEndPosition usePadded
   while(!m_alignments.empty() &&  m_alignments.front().Position + m_alignments.front().AlignedBases.length() - 1 < cur_pos)
     m_alignments.pop_front();
 

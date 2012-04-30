@@ -29,6 +29,8 @@ class InsertionSequence : public BamSequence {
   virtual char next();
   //virtual char retrieve(int n);
 
+  // TODO: we may need to find a way to acurately identify position of indels
+
  protected:
   virtual char calc_position(int i);
   virtual bool filter(BamTools::BamAlignment align);
