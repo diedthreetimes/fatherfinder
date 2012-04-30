@@ -44,6 +44,9 @@ public class PSI_C extends AbstractPSIProtocol {
     	stopwatch.stop();
     	Log.i(TAG, "Client offline phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
     	
+    	// Wait for the server to finish offline phase
+    	s.readString();
+    	
     	// ONLINE PHASE
     	stopwatch.start();
     	
@@ -57,14 +60,16 @@ public class PSI_C extends AbstractPSIProtocol {
     
     	List<BigInteger> tsjs = new ArrayList<BigInteger>(); // The set {ts1, ts2, ..., tsj}
     	List<BigInteger> tcis = new ArrayList<BigInteger>(); //Will store the clients processed set
-    	BigInteger y = null;
+    	BigInteger y, yrc, rc_inv;
     	
     	// Get values from the server and process immediately 
     	y = new BigInteger(s.read());
+    	yrc = y.modPow(rc, p);
+    	rc_inv = rc1.modInverse(q);
     	for(int i = 0; i < ais.size(); i++){
     		// This is the following calculation all mod p
     		// H(y^Rc * bi^(1/Rc') )
-    		tcis.add(hash( y.modPow(rc, p).multiply((new BigInteger(s.read())).modPow(rc1.modInverse(q), p)).mod(p) ) );
+    		tcis.add(hash( yrc.multiply((new BigInteger(s.read())).modPow(rc_inv, p)).mod(p) ) );
     	}
     	
     	for(int i = 0; i < ais.size(); i++){
@@ -104,6 +109,7 @@ public class PSI_C extends AbstractPSIProtocol {
     	
     	stopwatch.stop();
     	Log.i(TAG, "Server offline phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
+    	s.write("Offline DONE");
     	
     	// ONLINE PHASE
     	stopwatch.start();
@@ -134,10 +140,11 @@ public class PSI_C extends AbstractPSIProtocol {
     		s.write(bi.toByteArray());
     	}
     	
+    	BigInteger xrs = x.modPow(rs,p);
     	for(BigInteger ksj : ksjs){
     		// This is the following calculation all mod p
     		// H(x^Rs * ksj )
-    		s.write((hash( x.modPow(rs, p).multiply(ksj).mod(p) )).toByteArray());
+    		s.write((hash( xrs.multiply(ksj).mod(p) )).toByteArray());
     	}
     	
     	
