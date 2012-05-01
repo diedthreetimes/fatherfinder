@@ -47,6 +47,7 @@ public class ConductTest extends Activity {
 	// Debugging
     private static final String TAG = "ConductTest";
     private static final boolean D = true;
+    private static final boolean benchmarkBandwidth = true;
     
     // Intent request codes
     private static final int REQUEST_CONNECT_DEVICE_SECURE = 1;
@@ -179,7 +180,13 @@ public class ConductTest extends Activity {
         }); */
 
         // Initialize the BluetoothService to perform bluetooth connections
-        mMessageService = new BluetoothService(this, mHandler);
+        //TODO: update this to use an interace instead
+        //      This should alow us to move this out of this class
+        if(benchmarkBandwidth){
+        	mMessageService = new BluetoothServiceLogger(this, mHandler);
+        }else {
+        	mMessageService = new BluetoothService(this, mHandler);
+        }
         
         ensureDiscoverable(); //added for the test
     }

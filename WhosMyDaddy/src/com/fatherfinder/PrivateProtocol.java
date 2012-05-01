@@ -40,7 +40,7 @@ public abstract class PrivateProtocol extends Service {
     //      It is also worht noting that the benchmarking can not be threaded
     //      The timers are not thread safe
     protected final boolean benchmark = true;
-    private final int NUM_TRIALS = 1000;
+    private final int NUM_TRIALS = 10;
     
     // Exceptions
     @SuppressWarnings("serial")
@@ -101,6 +101,10 @@ public abstract class PrivateProtocol extends Service {
     	onlineWatch.clear();
     	offlineWatch.clear();
     	
+    	// TODO: As it stands now conduct test must initialize this properly (this is dangerous)
+    	if(benchmark)
+    		((BluetoothServiceLogger) s).measureStart();
+    	
     	try{
     		do{
 		    	//TODO: This loop is a huge hack in order to ensure devices get connected
@@ -130,6 +134,13 @@ public abstract class PrivateProtocol extends Service {
     		}while(benchmark && ++numTrials < NUM_TRIALS);
     		
     		reportTimers(client);
+    		
+    		if(benchmark){
+    			((BluetoothServiceLogger) s).measureStop();
+    			Log.i(TAG, "Bytes used: " +((BluetoothServiceLogger) s).bytesUsed() / numTrials);
+    			Log.i(TAG, "MegaBytes used: " +((BluetoothServiceLogger) s).megaBytesUsed() / numTrials);
+    			Log.i(TAG, "GigaBytes used: " +((BluetoothServiceLogger) s).gigaBytesUsed() / numTrials);
+    		}
 	    	
     	}
     	finally {
