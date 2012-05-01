@@ -14,12 +14,11 @@ import android.util.Log;
  *
  */
 
-// TODO: Why can't we extend PSI_C
 public class PSI_C_Homo extends PSI_C {
 	
 	// Debugging
     private final String TAG = "Homomorphic PSI-C";
-    private final boolean D = true;
+    private final boolean D = false;
     
     private SecureRandom rand;
     
@@ -80,8 +79,6 @@ public class PSI_C_Homo extends PSI_C {
     	// C = (c1, c2)
     	List<Encryption> Cs = new ArrayList<Encryption>(); // The set of encryptions of inputs
     	
-    	
-    	//TODO: In this encryption scheme what are the restrictions on R's
     	BigInteger h,r,c1,c2;
     	for( String input: inputs ){
     		h = q.subtract(hash(input)).mod(q);
@@ -99,7 +96,7 @@ public class PSI_C_Homo extends PSI_C {
     	}
    
     	offlineWatch.pause();
-    	Log.i(TAG, "Client offline phase completed in " + offlineWatch.getElapsedTime() + " miliseconds.");
+    	//Log.i(TAG, "Client offline phase completed in " + offlineWatch.getElapsedTime() + " miliseconds.");
     	
     	// Wait for the server to finish offline phase
     	s.readString();
@@ -114,10 +111,10 @@ public class PSI_C_Homo extends PSI_C {
     		s.write(e.c2);
     	}
     	
-    	onlineWatch.pause();
-    	Log.i(TAG, "Client send phase completed in " + onlineWatch.getElapsedTime() + " miliseconds.");
+    	//onlineWatch.pause();
+    	//Log.i(TAG, "Client send phase completed in " + onlineWatch.getElapsedTime() + " miliseconds.");
+    	//onlineWatch.start();
     	
-    	onlineWatch.start();
     	int numCommon = 0;
     	
     	// Get values from the server and process
@@ -132,7 +129,7 @@ public class PSI_C_Homo extends PSI_C {
     	s.write(String.valueOf(numCommon));
     	
     	onlineWatch.pause();
-        Log.i(TAG, "Client online phase completed in " + onlineWatch.getElapsedTime() + " miliseconds.");
+        //Log.i(TAG, "Client online phase completed in " + onlineWatch.getElapsedTime() + " miliseconds.");
     	
 		return String.valueOf(numCommon);
     }
@@ -159,7 +156,7 @@ public class PSI_C_Homo extends PSI_C {
     	}
     	
     	offlineWatch.pause();
-    	Log.i(TAG, "Server offline phase completed in " + offlineWatch.getElapsedTime() + " miliseconds.");
+    	//Log.i(TAG, "Server offline phase completed in " + offlineWatch.getElapsedTime() + " miliseconds.");
     	s.write("Offline DONE");
     	
     	List<Encryption> es = new ArrayList<Encryption>(); // The set of return encryptions
@@ -169,7 +166,7 @@ public class PSI_C_Homo extends PSI_C {
     	//   after we receive the clients data. 
     	
     	// Start reading client data
-    	y = new BigInteger(s.read());
+    	y = s.readBigInteger();
     	
     	// ONLINE PHASE
     	onlineWatch.start();
@@ -197,7 +194,7 @@ public class PSI_C_Homo extends PSI_C {
     	}
     	
     	onlineWatch.pause();
-        Log.i(TAG, "Server online phase completed in " + onlineWatch.getElapsedTime()+ " miliseconds.");
+        //Log.i(TAG, "Server online phase completed in " + onlineWatch.getElapsedTime()+ " miliseconds.");
     	
         // Return the result from the client
 		return s.readString();
