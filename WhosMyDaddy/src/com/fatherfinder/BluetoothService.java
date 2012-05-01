@@ -12,8 +12,6 @@ package com.fatherfinder;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.StreamCorruptedException;
 import java.math.BigInteger;
 import java.util.UUID;
@@ -38,7 +36,6 @@ import android.util.Log;
  * howerver, handle discovery.
  */
 public class BluetoothService {	
-	private static final int BIGINT_ENCODING = 16;
 	// Debugging
     private static final String TAG = "BluetoothService";
     private static final boolean D = false;
@@ -87,8 +84,6 @@ public class BluetoothService {
     public static final String DEVICE_NAME = "device_name";
     public static final String TOAST = "toast";
 	
-    private static final String MESSAGE_SEPERATOR = "%%%%%"; //TODO: make this something smarter (non ascii)
-    
     /**
     * Constructor. Prepares a new Bluetooth session.
     * @param context  The UI Activity Context
@@ -287,7 +282,7 @@ public class BluetoothService {
      * @param out The bytes to write
      * @see ConnectedThread#write(byte[])
      */
-    /*public void write(byte[] out) {
+    public void write(byte[] out) {
         // Create temporary object
         ConnectedThread r;
         // Synchronize a copy of the ConnectedThread
@@ -297,30 +292,17 @@ public class BluetoothService {
         }
         // Perform the write unsynchronized
         r.write(out);
-    }*/
-    
-    public void write(String out){
-    	if(D) Log.d(TAG, "Write: " + out);
-    	// Create temporary object
-        ConnectedThread r;
-        // Synchronize a copy of the ConnectedThread
-        synchronized (this) {
-            if (mState != STATE_CONNECTED) return;
-            r = mConnectedThread;
-        }
-        // Perform the write unsynchronized
-        r.write(out);
-    }
-    
-    public void write(BigInteger out) {
-    	write(out.toString(BIGINT_ENCODING));
     }
     
     
-    /*public void write(String buffer) {
+    public void write(String buffer) {
     	write(buffer.getBytes());
     	if(D) Log.d(TAG, "Write: " + buffer);
-    }*/
+    }
+    
+    public void write(BigInteger out){
+    	write(out.toByteArray());
+    }
    
     
     /**
@@ -329,7 +311,7 @@ public class BluetoothService {
      * @return the bytes read
      * @see ConnectedThread#read()
      */
-    public String read() {
+    public byte [] read() {
         // Create temporary object
         ConnectedThread r;
         // Synchronize a copy of the ConnectedThread
@@ -339,14 +321,14 @@ public class BluetoothService {
         }
         
         // Perform the read unsynchronized and parse
-        String readMessage = r.read();
+        byte[] readMessage = r.read();
         
-        if(D) Log.d(TAG, "Read: " + readMessage);
+        if(D) Log.d(TAG, "Read: " + new String(readMessage));
         return readMessage;
     }
     
     public BigInteger readBigInteger(){
-    	return new BigInteger(readString(),BIGINT_ENCODING);
+    	return new BigInteger(read());
     }
     
     /**
@@ -354,7 +336,7 @@ public class BluetoothService {
      * @see #read()
      */
 	public String readString() {
-		return read(); 
+		return new String(read());
 	}
     
     /**
@@ -571,22 +553,22 @@ public class BluetoothService {
      */
     private class ConnectedThread extends Thread {
 		private final BluetoothSocket mmSocket;
-        private final InputStream mmInStream;
-        private final OutputStream mmOutStream;
+        private final DataInputStream mmInStream;
+        private final DataOutputStream mmOutStream;
         private boolean mForwardRead = true;
-        private BlockingQueue<String> mMessageBuffer;
+        private BlockingQueue<byte []> mMessageBuffer;
         	
         public ConnectedThread(BluetoothSocket socket, String socketType) {
             Log.d(TAG, "create ConnectedThread: " + socketType);
             mmSocket = socket;
-            InputStream tmpIn = null;
-            OutputStream tmpOut = null;
-            mMessageBuffer = new LinkedBlockingQueue<String>(); // TODO: add a capacity here to prevent doS
+            DataInputStream tmpIn = null;
+            DataOutputStream tmpOut = null;
+            mMessageBuffer = new LinkedBlockingQueue<byte []>(); // TODO: add a capacity here to prevent doS
             
             // Get the BluetoothSocket input and output streams
             try {
-                tmpIn = socket.getInputStream();
-                tmpOut =socket.getOutputStream();
+                tmpIn = new DataInputStream( socket.getInputStream() );
+                tmpOut = new DataOutputStream( socket.getOutputStream() );
                 
             } catch (StreamCorruptedException e) {
 				Log.e(TAG, "object streams corrupt", e);
@@ -621,7 +603,7 @@ public class BluetoothService {
          * @return the bytes read
          * @see ConnectedThread#read()
          */
-		public String read() {
+		public byte[] read() {
 			// read should not be used if packets are being read directly off the wire
 			if(mForwardRead){
 				return null; //TODO: Raise here?
@@ -639,8 +621,9 @@ public class BluetoothService {
          * Write to the connected OutStream.
          * @param buffer  The bytes to write
          */
-        /*public void write(byte[] buffer) {
+        public void write(byte[] buffer) {
             try {
+            	mmOutStream.writeInt(buffer.length);
                 mmOutStream.write(buffer);               
 
                 // Share the sent message back to the UI Activity
@@ -649,48 +632,35 @@ public class BluetoothService {
             } catch (IOException e) {
                 Log.e(TAG, "Exception during write", e);
             }
-        }*/
-        
-        public void write(String buffer) {
-        	 try {
-                 mmOutStream.write((buffer + MESSAGE_SEPERATOR).getBytes());               
-
-                 // Share the sent message back to the UI Activity
-                 mHandler.obtainMessage(MESSAGE_WRITE, -1, -1, buffer)
-                         .sendToTarget();
-             } catch (IOException e) {
-                 Log.e(TAG, "Exception during write", e);
-             }
         }
 
 		public void run() {
             Log.i(TAG, "BEGIN mConnectedThread");
             
             int bytes;
-            byte[] buffer = new byte[9999]; //TODO: This still may be a problem
 			
             // Keep listening to the InputStream while connected
             while (true) {
             	try {
             		// Read from the InputStream
-            		bytes = mmInStream.read(buffer);	
+            		bytes = mmInStream.readInt();	
+            		byte[] buffer = new byte[bytes]; // TODO: This is a little dangerous	
             		
-            		for( String message: new String(buffer, 0,bytes).split(MESSAGE_SEPERATOR)) {
-            			if(mForwardRead) {
-    	                    mHandler.obtainMessage(MESSAGE_READ, message.getBytes().length, -1, message.getBytes())
-    	                            .sendToTarget();
-                        }
-                        else {
-    			    	    try {
-    			    	    	//TODO: Convert this to a string queue and see if that matters
-    							mMessageBuffer.put(message);
-    						} catch (InterruptedException e) {
-    							Log.e(TAG, "Message add interupted.");
-    							//TODO: possibly throw here
-    						}
-                        }
-        	    	}
-                    
+            		mmInStream.readFully(buffer, 0, bytes);
+            		
+                    if(mForwardRead) {
+	                    mHandler.obtainMessage(MESSAGE_READ, buffer.length, -1, buffer)
+	                            .sendToTarget();
+                    }
+                    else {
+			    	    try {
+			    	    	
+							mMessageBuffer.put(buffer);
+						} catch (InterruptedException e) {
+							Log.e(TAG, "Message add interupted.");
+							//TODO: possibly throw here
+						}
+                    }
                 } catch (IOException e) {
                     Log.e(TAG, "disconnected", e);
                     connectionLost();

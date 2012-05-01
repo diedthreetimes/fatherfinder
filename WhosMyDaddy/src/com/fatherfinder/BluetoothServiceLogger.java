@@ -22,10 +22,10 @@ public class BluetoothServiceLogger extends BluetoothService {
 		super.write(out);
 	}
 	
-	public String read(){
-		String r = super.read();
+	public byte [] read(){
+		byte [] r = super.read();
 		if(mMeasure){
-			bytes += r.getBytes().length;
+			bytes += r.length;
 		}
 		return r;
 	}
