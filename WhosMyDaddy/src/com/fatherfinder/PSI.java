@@ -38,9 +38,9 @@ public class PSI extends AbstractPSIProtocol {
     	
     	// This code has been pipelined (see note in server code)
     	
-    	s.write(x.toByteArray());
+    	s.write(x);
     	for( BigInteger ai : ais ){
-    		s.write(ai.toByteArray());
+    		s.write(ai);
     	}
     
     	List<BigInteger> tsjs = new ArrayList<BigInteger>(); // The set {ts1, ts2, ..., tsj}
@@ -106,19 +106,19 @@ public class PSI extends AbstractPSIProtocol {
     	// Start reading client data
     	x = new BigInteger(s.read());
     	
-    	s.write(y.toByteArray());
+    	s.write(y);
     	for(int i = 0; i < ksjs.size(); i++){
     		// Read an ai
     		ais.add(new BigInteger(s.read()));
     		
     		// Add our secret and send
-    		s.write(ais.get(i).modPow(rs1, p).toByteArray());
+    		s.write(ais.get(i).modPow(rs1, p));
     	}
     	
     	for(BigInteger ksj : ksjs){
     		// This is the following calculation all mod p
     		// H(x^Rs * ksj )
-    		s.write((hash( x.modPow(rs, p).multiply(ksj).mod(p) ).toByteArray()));
+    		s.write((hash( x.modPow(rs, p).multiply(ksj).mod(p) )));
     	}
     	
     	

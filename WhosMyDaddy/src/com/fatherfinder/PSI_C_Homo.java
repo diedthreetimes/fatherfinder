@@ -108,10 +108,10 @@ public class PSI_C_Homo extends PSI_C {
     	onlineWatch.start();
     	
     	
-    	s.write(y.toByteArray());
+    	s.write(y);
     	for( Encryption e : Cs ){
-    		s.write(e.c1.toByteArray());
-    		s.write(e.c2.toByteArray());
+    		s.write(e.c1);
+    		s.write(e.c2);
     	}
     	
     	onlineWatch.pause();
@@ -192,8 +192,8 @@ public class PSI_C_Homo extends PSI_C {
     	
     	// Send back to the client
     	for( Encryption e: es ){
-    		s.write(e.c1.toByteArray());
-    		s.write(e.c2.toByteArray());
+    		s.write(e.c1);
+    		s.write(e.c2);
     	}
     	
     	onlineWatch.pause();

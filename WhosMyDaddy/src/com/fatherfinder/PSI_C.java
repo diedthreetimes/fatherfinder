@@ -53,9 +53,9 @@ public class PSI_C extends AbstractPSIProtocol {
     	
     	// This code has been pipelined (see note in server code)
     	
-    	s.write(x.toByteArray());
+    	s.write(x);
     	for( BigInteger ai : ais ){
-    		s.write(ai.toByteArray());
+    		s.write(ai);
     	}
     
     	List<BigInteger> tsjs = new ArrayList<BigInteger>(); // The set {ts1, ts2, ..., tsj}
@@ -63,17 +63,17 @@ public class PSI_C extends AbstractPSIProtocol {
     	BigInteger y, yrc, rc_inv;
     	
     	// Get values from the server and process immediately 
-    	y = new BigInteger(s.read());
+    	y = s.readBigInteger();
     	yrc = y.modPow(rc, p);
     	rc_inv = rc1.modInverse(q);
     	for(int i = 0; i < ais.size(); i++){
     		// This is the following calculation all mod p
     		// H(y^Rc * bi^(1/Rc') )
-    		tcis.add(hash( yrc.multiply((new BigInteger(s.read())).modPow(rc_inv, p)).mod(p) ) );
+    		tcis.add(hash( yrc.multiply((s.readBigInteger()).modPow(rc_inv, p)).mod(p) ) );
     	}
     	
     	for(int i = 0; i < ais.size(); i++){
-    		tsjs.add(new BigInteger(s.read()));
+    		tsjs.add(s.readBigInteger());
     	}
     	
     	// tcis = tcis ^ tsjs (intersection)
@@ -121,13 +121,13 @@ public class PSI_C extends AbstractPSIProtocol {
     	//   after we receive the clients data. 
     	
     	// Start reading client data
-    	x = new BigInteger(s.read());
+    	x = s.readBigInteger();
     	
     	List<BigInteger> bis = new ArrayList<BigInteger>(); // will store client data before shuffling
     	
     	for(int i = 0; i < ksjs.size(); i++){
     		// Read an ai
-    		ais.add(new BigInteger(s.read()));
+    		ais.add(s.readBigInteger());
     		
     		// Add our secret
     		bis.add( ais.get(i).modPow(rs1, p) );
@@ -135,16 +135,16 @@ public class PSI_C extends AbstractPSIProtocol {
     	Collections.shuffle(bis, r);
     	
     	// Send back to the client
-    	s.write(y.toByteArray());
+    	s.write(y);
     	for( BigInteger bi : bis ){
-    		s.write(bi.toByteArray());
+    		s.write(bi);
     	}
     	
     	BigInteger xrs = x.modPow(rs,p);
     	for(BigInteger ksj : ksjs){
     		// This is the following calculation all mod p
     		// H(x^Rs * ksj )
-    		s.write((hash( xrs.multiply(ksj).mod(p) )).toByteArray());
+    		s.write((hash( xrs.multiply(ksj).mod(p) )));
     	}
     	
     	
