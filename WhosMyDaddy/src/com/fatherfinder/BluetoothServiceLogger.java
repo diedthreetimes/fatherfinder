@@ -15,9 +15,9 @@ public class BluetoothServiceLogger extends BluetoothService {
 	private long bytes = 0;
 	
 	
-	public void write(String out){
+	public void write(byte [] out){
 		if(mMeasure){
-			bytes += out.getBytes().length;
+			bytes += out.length;
 		}
 		super.write(out);
 	}
