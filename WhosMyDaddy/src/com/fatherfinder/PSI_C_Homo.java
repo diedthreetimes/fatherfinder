@@ -72,7 +72,7 @@ public class PSI_C_Homo extends PSI_C {
  // Actually perform the test (these will be overides from a testing base class (and can be the same function)
     protected String conductClientTest(BluetoothService s, List<String> inputs){
     	// OFFLINE PHASE
-    	stopwatch.start();
+    	offlineWatch.start();
     	BigInteger x  = randomRange(q); // Secret 1
     	
     	BigInteger y = g.modPow(x, p);
@@ -98,11 +98,14 @@ public class PSI_C_Homo extends PSI_C {
     		Cs.add(new Encryption(c1,c2));
     	}
    
-    	stopwatch.stop();
-    	Log.i(TAG, "Client offline phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
+    	offlineWatch.pause();
+    	Log.i(TAG, "Client offline phase completed in " + offlineWatch.getElapsedTime() + " miliseconds.");
+    	
+    	// Wait for the server to finish offline phase
+    	s.readString();
     	
     	// ONLINE PHASE
-    	stopwatch.start();
+    	onlineWatch.start();
     	
     	
     	s.write(y.toByteArray());
@@ -111,13 +114,10 @@ public class PSI_C_Homo extends PSI_C {
     		s.write(e.c2.toByteArray());
     	}
     	
-    	stopwatch.stop();
-    	Log.i(TAG, "Client send phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
+    	onlineWatch.pause();
+    	Log.i(TAG, "Client send phase completed in " + onlineWatch.getElapsedTime() + " miliseconds.");
     	
-    	// Wait for the server to finish offline phase
-    	s.readString();
-    	
-    	stopwatch.start();
+    	onlineWatch.start();
     	int numCommon = 0;
     	
     	// Get values from the server and process
@@ -131,15 +131,15 @@ public class PSI_C_Homo extends PSI_C {
     	if(D) Log.d(TAG, "Client calculated: " + String.valueOf(numCommon));
     	s.write(String.valueOf(numCommon));
     	
-    	stopwatch.stop();
-        Log.i(TAG, "Client online phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
+    	onlineWatch.pause();
+        Log.i(TAG, "Client online phase completed in " + onlineWatch.getElapsedTime() + " miliseconds.");
     	
 		return String.valueOf(numCommon);
     }
     
     protected String conductServerTest(BluetoothService s, List<String> inputs) {
     	// OFFLINE PHASE
-    	stopwatch.start();
+    	offlineWatch.start();
     	// Generate the randoms for later along with the first half of the encryption 
     	List<BigInteger> rs = new ArrayList<BigInteger>();  // Randomness for encryption later
     	List<BigInteger> r1s = new ArrayList<BigInteger>(); // Randomness for masking later
@@ -158,8 +158,8 @@ public class PSI_C_Homo extends PSI_C {
     		ghs.add(g.modPow(h,p));
     	}
     	
-    	stopwatch.stop();
-    	Log.i(TAG, "Server offline phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
+    	offlineWatch.pause();
+    	Log.i(TAG, "Server offline phase completed in " + offlineWatch.getElapsedTime() + " miliseconds.");
     	s.write("Offline DONE");
     	
     	List<Encryption> es = new ArrayList<Encryption>(); // The set of return encryptions
@@ -172,7 +172,7 @@ public class PSI_C_Homo extends PSI_C {
     	y = new BigInteger(s.read());
     	
     	// ONLINE PHASE
-    	stopwatch.start();
+    	onlineWatch.start();
     
     	BigInteger c2;
     	Encryption se, ce;
@@ -196,8 +196,8 @@ public class PSI_C_Homo extends PSI_C {
     		s.write(e.c2.toByteArray());
     	}
     	
-    	stopwatch.stop();
-        Log.i(TAG, "Server online phase completed in " + stopwatch.getElapsedTime()+ " miliseconds.");
+    	onlineWatch.pause();
+        Log.i(TAG, "Server online phase completed in " + onlineWatch.getElapsedTime()+ " miliseconds.");
     	
         // Return the result from the client
 		return s.readString();

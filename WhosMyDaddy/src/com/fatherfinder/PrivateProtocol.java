@@ -25,14 +25,22 @@ import android.util.Log;
 public abstract class PrivateProtocol extends Service {
 	// Debugging
     private final String TAG = "PrivateProtocol";
-    private final boolean D = true;
+    private final boolean D = false;
     
     // Message Paramaters
     public static final String SEPERATOR = ";;";
     public static final String START_TEST_MESSAGE = "START";
     public static final String ACK_START_MESSAGE = "ACK_START";
     
-    protected StopWatch stopwatch;
+    protected StopWatch offlineWatch;
+    protected StopWatch onlineWatch;
+    
+    // This is a little ugly, but quick enough for now
+    // TODO: Extract benchmarking into another class
+    //      It is also worht noting that the benchmarking can not be threaded
+    //      The timers are not thread safe
+    protected final boolean benchmark = true;
+    private final int NUM_TRIALS = 1000;
     
     // Exceptions
     @SuppressWarnings("serial")
@@ -52,7 +60,8 @@ public abstract class PrivateProtocol extends Service {
     @Override
     public void onCreate(){
     	loadSharedKeys();
-    	stopwatch = new StopWatch();
+    	onlineWatch = new StopWatch();
+    	offlineWatch = new StopWatch();
     }
     
 //    @Override //TODO: do we need this? I don't think so since we only allow binding to the service
@@ -88,31 +97,40 @@ public abstract class PrivateProtocol extends Service {
     	//Switch to synchronous message reading. 
     	s.setReadLoop(false); // this may take a message to take affect
     	
+    	int numTrials = 0;
+    	onlineWatch.clear();
+    	offlineWatch.clear();
+    	
     	try{
-	    	//TODO: This loop is a huge hack in order to ensure devices get connected
-	    	while(ret == null){
-		    	try{
-		    		//TODO: Simplify protocol if messages are guaranteed (they may not be)
-			    	if(client){
-			    		initiateClient(testName, s);
-			    		ret= conductClientTest(s, inputSet);
+    		do{
+		    	//TODO: This loop is a huge hack in order to ensure devices get connected
+		    	do{
+			    	try{
+			    		//TODO: Simplify protocol if messages are guaranteed (they may not be)
+				    	if(client){
+				    		initiateClient(testName, s);
+				    		ret= conductClientTest(s, inputSet);
+				    	}
+				    	else{
+				    		initiateServer(testName, s);
+				    		ret = conductServerTest(s, inputSet);
+				    	}
 			    	}
-			    	else{
-			    		initiateServer(testName, s);
-			    		ret = conductServerTest(s, inputSet);
+			    	catch(DoubleClientException e){
+			    		Log.i(TAG, "Both users clicked at the same time");
+			    		
+			    		//TODO: Don't use flow control here
+			    		//TODO: one user can be forced to always be the server and thus never learn the result
+			    		//          to fix this security issue simply ensure the one who clicks is always the server
+			    		client = !client;
+			    		
 			    	}
-		    	}
-		    	catch(DoubleClientException e){
-		    		Log.i(TAG, "Both users clicked at the same time");
-		    		
-		    		//TODO: Don't use flow control here
-		    		//TODO: one user can be forced to always be the server and thus never learn the result
-		    		//          to fix this security issue simply ensure the one who clicks is always the server
-		    		client = !client;
-		    		
-		    	}
-		    	
-	    	}
+			    	
+		    	}while(ret == null);
+    		}while(benchmark && ++numTrials < NUM_TRIALS);
+    		
+    		reportTimers(client);
+	    	
     	}
     	finally {
     		
@@ -144,7 +162,7 @@ public abstract class PrivateProtocol extends Service {
 			}
 			else if(read.equals(START_TEST_MESSAGE + SEPERATOR + testName)){ //
 				if(D) Log.d(TAG, "Ack not recieved, RE-ACK" + read);
-				s.write(ACK_START_MESSAGE);
+				//s.write(ACK_START_MESSAGE); //TODO: Will this break things? it was added for easy benchmarking
 			}
 			else if(read.equals(ACK_START_MESSAGE)){
 				break;
@@ -186,13 +204,13 @@ public abstract class PrivateProtocol extends Service {
 	    				read = s.readString();
 	    			}
 	    			int theirRand = Integer.parseInt(read);
-	    			if( rand > theirRand ){ // TODO: send a random and compare instead
+	    			if( rand > theirRand ){
 	    				throw new DoubleClientException();
 	    			}
 	    			break;
     			}
     		}
-    		else { //We didn't hear the ack resend.
+    		else { //We didn't hear the ack resend. //TODO: is resending dangerous?
     			if(D) Log.d(TAG, "Garbage was recieved" + read);
     			s.write(START_TEST_MESSAGE + SEPERATOR + testName);
     		}
@@ -204,6 +222,16 @@ public abstract class PrivateProtocol extends Service {
     protected abstract String conductServerTest(BluetoothService s, List<String> input);
     
     // Utility functions
+    
+    
+    protected void reportTimers(boolean client){reportTimers(client, NUM_TRIALS);}
+    protected void reportTimers(boolean client, int numTrials){
+    	Log.i(TAG, "Trials completed: " + numTrials);
+    	
+    	String cl = client ? "Client" : "Server";
+    	Log.i(TAG, cl + " offline phase completed in " + offlineWatch.getElapsedTime()/numTrials + " miliseconds.");
+    	Log.i(TAG, cl + " online phase completed in " + onlineWatch.getElapsedTime()/numTrials + " miliseconds.");
+    }
     
     protected abstract void loadSharedKeys();
 	protected BigInteger hash(byte [] message, byte selector){

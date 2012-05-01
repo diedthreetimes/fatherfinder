@@ -25,12 +25,12 @@ import android.util.Log;
 public class PSI_C extends AbstractPSIProtocol {
 	// Debugging
     private final String TAG = "PSI_C";
-    private final boolean D = true;
+    private final boolean D = false;
     
     // Actually perform the test (these will be overides from a testing base class (and can be the same function)
     protected String conductClientTest(BluetoothService s, List<String> input){
     	// OFFLINE PHASE
-    	stopwatch.start();
+    	offlineWatch.start();
     	BigInteger rc  = randomRange(q); // Secret 1
     	BigInteger rc1 = randomRange(q); // Secret 2
     	
@@ -41,14 +41,14 @@ public class PSI_C extends AbstractPSIProtocol {
     		ais.add(hash(marker).modPow(rc1, p));
     	}
    
-    	stopwatch.stop();
-    	Log.i(TAG, "Client offline phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
+    	offlineWatch.pause();
+    	//Log.i(TAG, "Client offline phase completed in " + offlineWatch.getElapsedTime() + " miliseconds.");
     	
     	// Wait for the server to finish offline phase
     	s.readString();
     	
     	// ONLINE PHASE
-    	stopwatch.start();
+    	onlineWatch.start();
     	
     	
     	// This code has been pipelined (see note in server code)
@@ -85,15 +85,15 @@ public class PSI_C extends AbstractPSIProtocol {
     	if(D) Log.d(TAG, "Client calculated: " + String.valueOf(sharedLengths));
     	s.write(String.valueOf(sharedLengths));
     	
-    	stopwatch.stop();
-        Log.i(TAG, "Client online phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
+    	onlineWatch.pause();
+        //Log.i(TAG, "Client online phase completed in " + onlineWatch.getElapsedTime() + " miliseconds.");
     	
 		return String.valueOf(sharedLengths);
     }
     
     protected String conductServerTest(BluetoothService s, List<String> input) {
     	// OFFLINE PHASE
-    	stopwatch.start();
+    	offlineWatch.start();
     	BigInteger rs  = randomRange(q); // Secret 1
     	BigInteger rs1 = randomRange(q); // Secret 2
     	    	
@@ -107,12 +107,12 @@ public class PSI_C extends AbstractPSIProtocol {
     	SecureRandom r = new SecureRandom();
     	Collections.shuffle(ksjs, r);
     	
-    	stopwatch.stop();
-    	Log.i(TAG, "Server offline phase completed in " + stopwatch.getElapsedTime() + " miliseconds.");
+    	offlineWatch.pause();
+    	//Log.i(TAG, "Server offline phase completed in " + offlineWatch.getElapsedTime() + " miliseconds.");
     	s.write("Offline DONE");
     	
     	// ONLINE PHASE
-    	stopwatch.start();
+    	onlineWatch.start();
     	
     	List<BigInteger> ais = new ArrayList<BigInteger>(); // The set {a1,a2,...,ai}
     	BigInteger x = null;
@@ -148,8 +148,8 @@ public class PSI_C extends AbstractPSIProtocol {
     	}
     	
     	
-    	stopwatch.stop();
-        Log.i(TAG, "Server online phase completed in " + stopwatch.getElapsedTime()+ " miliseconds.");
+    	onlineWatch.pause();
+        //Log.i(TAG, "Server online phase completed in " + onlineWatch.getElapsedTime()+ " miliseconds.");
     	
 		return s.readString();
     }

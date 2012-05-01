@@ -14,6 +14,7 @@ public class StopWatch {
 
 private long startTime = 0;
 private long stopTime = 0;
+private long ellapsedTime = 0;
 private boolean running = false;
 
 
@@ -22,10 +23,27 @@ public void start() {
     this.running = true;
 }
 
+public void pause() {
+	this.running = false;
+	this.ellapsedTime += (System.currentTimeMillis() - startTime);
+	this.startTime = 0;
+	this.stopTime = 0;
+}
+
 
 public void stop() {
+	if(!running){
+		return;
+	}
+	
     this.stopTime = System.currentTimeMillis();
     this.running = false;
+}
+
+public void clear() {
+	startTime = 0;
+	stopTime = 0;
+	ellapsedTime = 0;
 }
 
 
@@ -33,10 +51,10 @@ public void stop() {
 public long getElapsedTime() {
     long elapsed;
     if (running) {
-         elapsed = (System.currentTimeMillis() - startTime);
+         elapsed = (System.currentTimeMillis() - startTime) + ellapsedTime;
     }
     else {
-        elapsed = (stopTime - startTime);
+        elapsed = (stopTime - startTime) + ellapsedTime;
     }
     return elapsed;
 }
@@ -44,14 +62,7 @@ public long getElapsedTime() {
 
 //elaspsed time in seconds
 public long getElapsedTimeSecs() {
-    long elapsed;
-    if (running) {
-        elapsed = ((System.currentTimeMillis() - startTime) / 1000);
-    }
-    else {
-        elapsed = ((stopTime - startTime) / 1000);
-    }
-    return elapsed;
+    return getElapsedTime() / 1000;
 }
 
 }
