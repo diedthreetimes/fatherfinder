@@ -125,14 +125,14 @@ public class AncestryTest {
     }
     
     private void doStart(Context context){
-    	//doBindService(context);
+    	doBindService(context);
     	//TODO: Verify file exists otherwise error
     	
     	//mReader = new SAMFileReader(new File(dataDirectory,"FatherFinder/NA19238.chrom1.ILLUMINA.bwa.YRI.high_coverage.20100311.bam")); //TODO: Unhardcode this (perhaps put this in settings)
     }
 	
     private void doStop(){
-    	//doUnbindService();
+    	doUnbindService();
     	//mReader.close();
     }
 	
@@ -144,7 +144,7 @@ public class AncestryTest {
 	
 	//TODO: This is going to need to be refactored but for now, we retrieve the random elements here.
 	//           The best way to do this is probably to just use a list object backed by a memory mapped file
-	private List<String> getGenomePositions(){
+	/*private List<String> getGenomePositions(){
     	int seed = 10780; // TODO: For now the randomness is hardcoded
     	Random r = new Random(seed);
     	
@@ -184,5 +184,31 @@ public class AncestryTest {
 	
     	
     	return new ArrayList<String>();
-    }
+    }*/
+	
+	// Simulate genomes of different sizes
+	private List<String> getGenomePositions(){
+		int totalSize = 1000;
+		List<String> ans = new ArrayList<String>();
+		
+		Random rand = new Random();
+		
+		char [] basePairs = {'A', 'C', 'T', 'G'};
+		char base;
+		
+		for(int i=0; i < totalSize;i++){
+			base = basePairs[(int)(Math.random()*4)];
+			ans.add(String.valueOf(i) + base);
+		}
+		
+		if(D) Log.d(TAG, "Using " + ans.size() + " bases");
+		
+		return ans;
+	}
+	
+	private List<String> getRandomGenomePositions(){
+		//TODO: Implement this if we want to 
+		//     more likely there should be some exchange of randomness with a List<String> wrapper to the stored data
+		return null;
+	}
 }
