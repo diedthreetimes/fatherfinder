@@ -111,7 +111,7 @@ public class AncestryTest {
         // supporting component replacement by other applications).
     	mContext = context;
         mContext.bindService(new Intent(context, 
-                PSI_C.class), mTestConnection, Context.BIND_AUTO_CREATE);
+                APSI.class), mTestConnection, Context.BIND_AUTO_CREATE);
         mIsBound = true;
     }
 
@@ -188,7 +188,7 @@ public class AncestryTest {
 	
 	// Simulate genomes of different sizes
 	private List<String> getGenomePositions(){
-		int totalSize = 1000;
+		int totalSize = 6;
 		List<String> ans = new ArrayList<String>();
 		
 		Random rand = new Random();

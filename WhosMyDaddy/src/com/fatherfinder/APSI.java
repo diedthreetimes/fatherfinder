@@ -11,7 +11,7 @@ public class APSI extends AbstractPSIProtocol {
 
 	// Debugging
     private final String TAG = "APSI";
-    private final boolean D = true;
+    private final boolean D = false;
 	
 	// Public keys
 	protected BigInteger N, e;
@@ -87,6 +87,7 @@ public class APSI extends AbstractPSIProtocol {
 		// Wait for the server to finish offline phase
     	s.readString();
 		
+    	// Online phase start
 		onlineWatch.start();
 		
 		s.write(String.valueOf(ai.size()));
@@ -105,12 +106,12 @@ public class APSI extends AbstractPSIProtocol {
 		}
 		
 		for(int i = 0; i < ai.size(); i++){
-			//tsci = ai' * Y^-rc
-			BigInteger temp = s.readBigInteger().multiply(Y.modPow(rci.get(i),N).modInverse(N)).mod(N);
-			if(D) Log.e(TAG, temp.toString(16));
-			
-			tcis.add(hash(temp));
+			//tsci = h'(ai' * Y^-rc)		
+			tcis.add(hash(s.readBigInteger().multiply(Y.modPow(rci.get(i).negate(),N)).mod(N)));
 		}
+		
+		// For APSI (specifically for Personalized Medicine) we only time 
+		onlineWatch.pause();
 		
 		for(int i = 0; i < serverSize; i++){
 			tsjs.add(s.readBigInteger());
@@ -128,7 +129,7 @@ public class APSI extends AbstractPSIProtocol {
     	if(D) Log.d(TAG, "Client calculated: " + String.valueOf(sharedLengths));
     	s.write(String.valueOf(sharedLengths));
     	
-    	onlineWatch.pause();
+    	//onlineWatch.pause();
     	
 		return String.valueOf(sharedLengths);
 	}
@@ -142,11 +143,10 @@ public class APSI extends AbstractPSIProtocol {
 		List<BigInteger> tsjs = new ArrayList<BigInteger>();
 		for(String i: input){
 			// tsj = H'(H(i)^rs)
-			tsjs.add(hash(hash(i).modPow(rs,N).mod(N)));
-			if(D) Log.e(TAG, hash(i).modPow(rs,N).mod(N).toString(16));
+			tsjs.add(hash(hash(i).modPow(BigInteger.valueOf(2).multiply(rs),N).mod(N)));
 		}
 		
-		offlineWatch.stop();
+		offlineWatch.pause();
 		
     	s.write("Offline DONE");
 		
@@ -156,15 +156,18 @@ public class APSI extends AbstractPSIProtocol {
 		
 		s.write(Y);
 		for(int i =0; i < clientSize; i++){
-			// ai' = ai^rs
-			s.write(s.readBigInteger().modPow(rs, N));
+			// ai' = ai^2e*rs
+			s.write(s.readBigInteger().modPow(BigInteger.valueOf(2).multiply(e).multiply(rs), N));
 		}
+		
+		// For Personalized medicine we only care about this tie
+		onlineWatch.pause();
 		
 		// Send tsj
 		for(BigInteger tsj: tsjs)
 			s.write(tsj);
 		
-		onlineWatch.stop();
+		// onlineWatch.pause();
 		
 		return s.readString();
 	}

@@ -40,7 +40,7 @@ public abstract class PrivateProtocol extends Service {
     //      It is also worht noting that the benchmarking can not be threaded
     //      The timers are not thread safe
     protected final boolean benchmark = true;
-    private final int NUM_TRIALS = 10;
+    private final int NUM_TRIALS = 1000;
     
     // Exceptions
     @SuppressWarnings("serial")
