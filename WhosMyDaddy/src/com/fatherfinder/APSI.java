@@ -91,7 +91,7 @@ public class APSI extends AbstractPSIProtocol {
 		onlineWatch.start();
 		
 		s.write(String.valueOf(ai.size()));
-		int serverSize = Integer.valueOf(s.read());
+		int serverSize = Integer.valueOf(s.readString());
 		
 		
 		List<BigInteger> tcis = new ArrayList<BigInteger>();
@@ -152,7 +152,7 @@ public class APSI extends AbstractPSIProtocol {
 		
 		onlineWatch.start();
 		s.write(String.valueOf(input.size()));
-		int clientSize = Integer.valueOf(s.read());
+		int clientSize = Integer.valueOf(s.readString());
 		
 		s.write(Y);
 		for(int i =0; i < clientSize; i++){

@@ -111,7 +111,7 @@ public class AncestryTest {
         // supporting component replacement by other applications).
     	mContext = context;
         mContext.bindService(new Intent(context, 
-                APSI.class), mTestConnection, Context.BIND_AUTO_CREATE);
+                PSI_C.class), mTestConnection, Context.BIND_AUTO_CREATE);
         mIsBound = true;
     }
 

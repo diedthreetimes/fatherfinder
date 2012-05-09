@@ -156,7 +156,7 @@ public class ConductTest extends Activity {
             	
             	// Are they are ready?
             	if(mOtherStartTest){
-            		doTest( AncestryTest.TEST_NAME, true ); // Start the paternity test as the client
+            		doTest( PaternityTest.TEST_NAME, true ); // Start the paternity test as the client
             	}
             	else{
             		if(testIndicator != null) testIndicator.dismiss(); // Tests are asynchronous so make sure we only show one indicator
@@ -400,7 +400,7 @@ public class ConductTest extends Activity {
                 	
                 	if(mStartTest){
                 		if(D) Log.e(TAG, "Double press detected!!");
-                		doTest(AncestryTest.TEST_NAME, true); //TODO: How do we know which test if we have multiple
+                		doTest(PaternityTest.TEST_NAME, true); //TODO: How do we know which test if we have multiple
                 	}
                 }
                 
