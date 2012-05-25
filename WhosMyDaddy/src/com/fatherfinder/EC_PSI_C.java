@@ -54,8 +54,8 @@ public class EC_PSI_C extends AbstractECProtocol {
     		s.write(ai);
     	}
     
-    	List<ECPoint> tsjs = new ArrayList<ECPoint>(); // The set {ts1, ts2, ..., tsj}
-    	List<ECPoint> tcis = new ArrayList<ECPoint>(); //Will store the clients processed set
+    	List<BigInteger> tsjs = new ArrayList<BigInteger>(); // The set {ts1, ts2, ..., tsj}
+    	List<BigInteger> tcis = new ArrayList<BigInteger>(); //Will store the clients processed set
     	ECPoint y, yrc;
     	BigInteger rc_inv;	
     	
@@ -70,7 +70,7 @@ public class EC_PSI_C extends AbstractECProtocol {
     	}
     	
     	for(int i = 0; i < ais.size(); i++){
-    		tsjs.add(s.readECPoint());
+    		tsjs.add(s.readBigInteger());
     	}
     	
     	// tcis = tcis ^ tsjs (intersection)
@@ -129,7 +129,7 @@ public class EC_PSI_C extends AbstractECProtocol {
     		ais.add(s.readECPoint());
     		
     		// Add our secret
-    		bis.add( ais.get(i).multiply(rs1).mod(n) );
+    		bis.add( ais.get(i).multiply(rs1) );
     	}
     	Collections.shuffle(bis, r);
     	

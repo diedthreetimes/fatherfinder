@@ -18,6 +18,11 @@ import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+import org.spongycastle.asn1.nist.NISTNamedCurves;
+import org.spongycastle.jce.ECPointUtil;
+import org.spongycastle.jce.interfaces.ECPointEncoder;
+import org.spongycastle.math.ec.ECPoint;
+
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
@@ -303,6 +308,10 @@ public class BluetoothService {
     public void write(BigInteger out){
     	write(out.toByteArray());
     }
+    
+    public void write(ECPoint out){
+    	write(out.getEncoded());
+    }
    
     
     /**
@@ -329,6 +338,11 @@ public class BluetoothService {
     
     public BigInteger readBigInteger(){
     	return new BigInteger(read());
+    }
+    
+    public ECPoint readECPoint(){
+    	//TODO: This probably doesn't belong here
+    	return NISTNamedCurves.getByName("P-224").getCurve().decodePoint(read());
     }
     
     /**
