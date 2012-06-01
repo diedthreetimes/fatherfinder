@@ -103,7 +103,7 @@ public class PaternityTest {
         // supporting component replacement by other applications).
     	mContext = context;
         mContext.bindService(new Intent(context, 
-                PSI_C.class), mTestConnection, Context.BIND_AUTO_CREATE);
+                EC_PSI_C.class), mTestConnection, Context.BIND_AUTO_CREATE);
         mIsBound = true;
     }
 
@@ -128,7 +128,12 @@ public class PaternityTest {
 	private String doTest(BluetoothService messageService, boolean isClient){
 		//TODO: Crash if we haven't finished binding
 		if(D) Log.d(TAG, "Starting a paternity test with " + isClient);
-         
+        
+		if(mTestService == null){
+			Log.e(TAG, "Test service did not initialize!");
+			return("An error has occured");//TODO: use string resource
+		}
+		
 		int common_markers = 0;
 		try{
 			common_markers = Integer.valueOf(mTestService.conductTest(TEST_NAME, messageService, isClient, getMarkerLengths()));
@@ -152,8 +157,8 @@ public class PaternityTest {
     	
     	// Randomize the inputs
     	markerLengths[1] = (int) (Math.random()*100.0);
-    	markerLengths[2] = (int) (Math.random()*2);
-    	markerLengths[3] = (int) (Math.random()*2);
+    	//markerLengths[2] = (int) (Math.random()*2);
+    	//markerLengths[3] = (int) (Math.random()*2);
     	
     	String[] markerNames = {"Mark1","SecondMarker","MarkNumber3","Mark4","Mark5","Mark6","Mark7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25"};
     	List<String> ret = new ArrayList<String>();
