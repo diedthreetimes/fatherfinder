@@ -103,7 +103,7 @@ public class PaternityTest {
         // supporting component replacement by other applications).
     	mContext = context;
         mContext.bindService(new Intent(context, 
-                EC_PSI_C.class), mTestConnection, Context.BIND_AUTO_CREATE);
+                PSI_C.class), mTestConnection, Context.BIND_AUTO_CREATE);
         mIsBound = true;
     }
 
