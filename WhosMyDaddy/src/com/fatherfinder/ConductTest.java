@@ -154,7 +154,7 @@ public class ConductTest extends Activity {
             	
             	mMessageService.write(TEST_OK);
             	
-            	// Are they are ready?
+            	// Are they ready?
             	if(mOtherStartTest){
             		doTest( PaternityTest.TEST_NAME, true ); // Start the paternity test as the client
             	}
