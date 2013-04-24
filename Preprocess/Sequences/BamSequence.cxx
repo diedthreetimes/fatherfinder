@@ -66,6 +66,9 @@ char BamSequence::current()
 
 char BamSequence::next()
 {  
+  //  if(true){
+  //    std::cout << "Alignment length: " << m_alignments.size() << std::endl;
+  //  }
   // This keeps no history
   if(m_ring.size() == 0){
       retrieve(1);// TODO: tune this

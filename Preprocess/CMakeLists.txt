@@ -30,4 +30,6 @@ include_directories (Sequences)
 add_subdirectory (Sequences)
 
 add_executable(rflp rflp.cxx)
+add_executable(saveAsText saveAsTxt.cxx)
+target_link_libraries(saveAsText Sequences bamtools)
 target_link_libraries (rflp Sequences bamtools) # if we need to link bamtools here than we need to do a find package first

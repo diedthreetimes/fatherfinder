@@ -1,5 +1,5 @@
 build/
-data/
+data
 CMakeFiles/
 CMakeCache.txt
 Makefile

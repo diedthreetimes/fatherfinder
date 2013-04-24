@@ -5,7 +5,7 @@
 
 std::string DATA = "data/test/";
 
-TEST(InsertionSequenceTest, FiltersInsertions){
+TEST(DISABLED_InsertionSequenceTest, FiltersInsertions){
   InsertionSequence s(DATA + "test_seq.bam");
   
   EXPECT_NE('T', s.current()); // TODO: Why is this needed (but not in pileup test ???
