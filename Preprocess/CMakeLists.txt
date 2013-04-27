@@ -29,6 +29,9 @@ link_directories (${BAMTOOLS_LIBRARIES})
 include_directories (Sequences)
 add_subdirectory (Sequences)
 
+include_directories (encryption)
+add_subdirectory (encryption)
+
 add_executable(rflp rflp.cxx)
 add_executable(saveAsText saveAsTxt.cxx)
 target_link_libraries(saveAsText Sequences bamtools)

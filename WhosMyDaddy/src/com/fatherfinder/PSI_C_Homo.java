@@ -10,6 +10,7 @@ import android.util.Log;
 
 /**
  * Partialy-Homomorphic encryption version of PSI-C based on masked hamming distance
+ * Arguably, this should not be called PSI-C at all, since it only works on equal size, sets with soem small, but fixed ordering
  * @author skyf
  *
  */
