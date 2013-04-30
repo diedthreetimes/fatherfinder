@@ -6,4 +6,4 @@ find_package(GTest)
 include_directories (${GTEST_INCLUDE_DIRS})
 link_directories (${GTEST_LIBRARIES})
 
-add_gtest(elgamal_test encryption)
+add_gtest(elgamal_test encryption encryption gmp gmpxx)
