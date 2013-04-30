@@ -8,7 +8,6 @@ TEST(ElgamalTest, GenerateKeys){
   Encryption* e = new Elgamal_Encryption();
 
   enc->GenerateKeys(pk,sk);
-  
 
   EXPECT_EQ(sk->g, pk->g);
   EXPECT_EQ(sk->p, pk->p);
@@ -21,7 +20,6 @@ TEST(ElgamalTest, GenerateKeys){
 
   // Check that it is a safe prime
   EXPECT_EQ((sk->p-1)/2, sk->q);
-  
     
   mpz_class res;
   // Check that h is computed correctly
@@ -43,23 +41,47 @@ TEST(ElgamalTest, Encrypt){
 
   enc->GenerateKeys(pk,sk);
   
-  std::string msg = "";
-  enc->encrypt(msg,pk,e);
+  std::string msg = "hi there";
+  e->encrypt(msg,pk);
+  EXPECT_FALSE(e->isZero(sk));
+  
+  e->encrypt((char)0,pk);
 
-  delete pk, sk, enc;
-  EXPECT_EQ(true, true);
-
-
+  EXPECT_TRUE(e->isZero(sk));
+  
+  
+  delete pk, sk, enc, e;
 }
 
-TEST(ElgamalTest, TestZero){
+TEST(ElgamalTest, TestMultAdd){
+  EncryptionScheme * enc = new Elgamal(512);
+  PublicKey* pk = new Elgamal_PublicKey();
+  SecretKey* sk = new Elgamal_SecretKey();
+  Encryption* e = new Elgamal_Encryption();
+  Encryption* e1 = new Elgamal_Encryption();
 
-}
+  enc->GenerateKeys(pk,sk);
 
-TEST(ElgamalTest, TestMult){
+  e->encrypt(5,pk);
+  e1->encrypt(5,pk);
+  
+  e1->mult(-1);
+  e->plus(e1);
+  EXPECT_TRUE(e->isZero(sk));
+  
+  char msg = 18;
+  e->encrypt(msg,pk);
+  EXPECT_FALSE(e->isZero(sk));
+  
+  e1->encrypt(2,pk);
+  e1->plus(e);
+  
+  e->encrypt(20,pk);
+  e->mult(-1);
 
-}
+  e->plus(e1);
+  EXPECT_TRUE(e->isZero(sk));
 
-TEST(ElgamalTest, TestAdd){
-
+  
+  delete pk, sk, enc, e, e1;
 }

@@ -35,7 +35,25 @@ class Elgamal_PublicKey : public PublicKey {
 
 class Elgamal_Encryption : public Encryption {
  public:
-  Elgamal_Encryption();
+  Elgamal_Encryption() {}
+  Elgamal_Encryption(Elgamal_Encryption & o) : c1(o.c1), c2(o.c2) {}
+  Elgamal_Encryption(mpz_class _c1, mpz_class _c2) : c1(_c1), c2(_c2) {}
+
+  virtual void encrypt(const std::string msg, const PublicKey * pk);
+  virtual void encrypt(const char msg, const PublicKey * pk);
+  virtual bool isZero(const SecretKey * sk);
+  virtual std::string decrypt(const Encryption * e, const PublicKey * pk){
+    throw "Additive Elgamal does not support decryption";
+  }
+
+  virtual Encryption * plus(Encryption * o);
+  virtual Encryption * mult(mpz_class o);
+
+  
+ private:
+  mpz_class c1, c2;
+  mpz_class p;
+  virtual void encrypt(const char * msg, const unsigned int length, const Elgamal_PublicKey * pk);
 };
 
 class Elgamal : public EncryptionScheme {
@@ -45,10 +63,9 @@ class Elgamal : public EncryptionScheme {
   // TODO: These should probably return status instead of void
   virtual void GenerateKeys(PublicKey * pk, SecretKey * sk);
   virtual void GenerateKeys(Elgamal_PublicKey * pk, Elgamal_SecretKey * sk);
-  virtual void encrypt(const std::string msg, const PublicKey * pk, Encryption * e);
-
+  
+  static gmp_randclass rr;
 private:
-  gmp_randclass rr;
   unsigned int security;
 };
 

@@ -10,6 +10,7 @@
 #ifndef _ENCRYPTION_H
 #define _ENCRYPTION_H
 
+#include <gmpxx.h>
 #include <string>
 class Key {
 };
@@ -18,7 +19,7 @@ class PublicKey : public Key{
 
 };
 
-class SecretKey : public Key {
+class SecretKey : public Key{
 
 };
 
@@ -27,8 +28,15 @@ class Encryption {
  public:
   virtual ~Encryption() {}
   
-  // public:
+  virtual void encrypt(const char msg, const PublicKey * pk) = 0;
+  virtual void encrypt(const std::string msg, const PublicKey * pk) = 0;
+  virtual bool isZero(const SecretKey * sk) = 0; 
+  virtual std::string decrypt(const Encryption * e, const PublicKey * pk) = 0;
 
+  // These should be subclassed as a "additive" encryption
+  // Homomorphic functions (these are all mutable)
+  virtual Encryption * plus(Encryption * o) = 0;
+  virtual Encryption * mult(mpz_class o) = 0;
 };
 
 
@@ -39,8 +47,6 @@ class EncryptionScheme {
 
   public:
     virtual void GenerateKeys(PublicKey * pk, SecretKey * sk) = 0;
-    virtual void encrypt(const std::string msg, const PublicKey * pk, Encryption * e) = 0;
-
 };
 
 #endif
