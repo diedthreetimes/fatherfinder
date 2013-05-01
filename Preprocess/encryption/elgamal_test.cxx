@@ -117,6 +117,35 @@ TEST(ElgamalTest, Serialize){
   EXPECT_EQ( length, -1);
   
   delete [] buffer;
+
+  // Test serializing the keys
+  Elgamal_PublicKey* pk1 = new Elgamal_PublicKey();
+  Elgamal_SecretKey* sk1 = new Elgamal_SecretKey();
+
+  buffer = new char [255];
+  length = pk->serialize(buffer, 255);
   
-  delete pk, sk, enc, e, e1;
+  ASSERT_NE( length, -1 );
+ 
+  EXPECT_TRUE(pk1->deserialize(buffer, length));
+  EXPECT_EQ(((Elgamal_PublicKey *)pk)->p, pk1->p);  
+  EXPECT_EQ(((Elgamal_PublicKey *)pk)->g, pk1->g);
+  EXPECT_EQ(((Elgamal_PublicKey *)pk)->q, pk1->q);
+  EXPECT_EQ(((Elgamal_PublicKey *)pk)->h, pk1->h);
+  
+  delete [] buffer;
+  
+  buffer = new char [255];
+  length = sk->serialize(buffer, 255);
+  
+  ASSERT_NE( length, -1 );
+ 
+  EXPECT_TRUE(sk1->deserialize(buffer, length));
+  EXPECT_EQ(((Elgamal_SecretKey *)sk)->p, sk1->p);  
+  EXPECT_EQ(((Elgamal_SecretKey *)sk)->q, sk1->q);  
+  EXPECT_EQ(((Elgamal_SecretKey *)sk)->g, sk1->g);
+  EXPECT_EQ(((Elgamal_SecretKey *)sk)->h, sk1->h);
+  EXPECT_EQ(((Elgamal_SecretKey *)sk)->x, sk1->x);
+
+  delete pk, sk, enc, e, e1, pk1, sk1;
 }

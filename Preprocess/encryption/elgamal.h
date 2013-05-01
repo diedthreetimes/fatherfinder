@@ -19,6 +19,9 @@ public:
 
 public:
   mpz_class h,g,q,x,p;
+
+  virtual int serialize(char * buffer, int size);
+  virtual bool deserialize(const char * buffer, const int length);
 };
 
 
@@ -30,6 +33,10 @@ class Elgamal_PublicKey : public PublicKey {
 
 
     mpz_class h,g,q,p;
+
+    virtual int serialize(char * buffer, int size);
+    virtual bool deserialize(const char * buffer, const int length);
+
 };
 
 

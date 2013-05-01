@@ -13,14 +13,15 @@
 #include <gmpxx.h>
 #include <string>
 class Key {
+ public:
+  virtual int serialize(char * buffer, int size) = 0;
+  virtual bool deserialize(const char * buffer, const int length) = 0;
 };
 
 class PublicKey : public Key{
-
 };
 
 class SecretKey : public Key{
-
 };
 
 class Encryption {

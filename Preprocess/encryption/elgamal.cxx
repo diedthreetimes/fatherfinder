@@ -144,7 +144,142 @@ bool Elgamal_Encryption::deserialize(const char * buffer, const int length, cons
   mpz_import(c1.get_mpz_t(), length1, 1, 1, 0, 0, buffer+offset);
   offset+= length1;
 
-  std::cout << length2 << std::endl;
   mpz_import(c2.get_mpz_t(), length2, 1, 1, 0, 0, buffer+offset);   
+  return true;
+}
+
+int Elgamal_PublicKey::serialize(char * buffer, int size){
+ //TODO: Remove redundant calls to mpz_sizeinbase
+  int count;
+  count  = (mpz_sizeinbase(h.get_mpz_t(), 2) + 7) / 8;
+  count += (mpz_sizeinbase(g.get_mpz_t(), 2) + 7) / 8;
+  count += (mpz_sizeinbase(q.get_mpz_t(), 2) + 7) / 8;
+  count += (mpz_sizeinbase(p.get_mpz_t(), 2) + 7) / 8;
+
+  if(count + 4 > size){
+    return -1;
+  }
+  
+  unsigned int offset = 0;
+  *(buffer+offset) = (char)((mpz_sizeinbase(h.get_mpz_t(), 2) + 7) / 8);
+  offset += 1;
+  *(buffer+offset) = (char)((mpz_sizeinbase(g.get_mpz_t(), 2) + 7) / 8);
+  offset += 1;
+  *(buffer+offset) = (char)((mpz_sizeinbase(q.get_mpz_t(), 2) + 7) / 8);
+  offset += 1;
+  *(buffer+offset) = (char)((mpz_sizeinbase(p.get_mpz_t(), 2) + 7) / 8);
+  offset += 1;
+
+  
+  size_t tmp;
+  mpz_export(buffer+offset, &tmp, 1, 1, 0, 0, h.get_mpz_t());
+  offset+= tmp;
+  mpz_export(buffer+offset, &tmp, 1, 1, 0, 0, g.get_mpz_t());
+  offset+= tmp;
+  mpz_export(buffer+offset, &tmp, 1, 1, 0, 0, q.get_mpz_t());
+  offset+= tmp;
+  mpz_export(buffer+offset, &tmp, 1, 1, 0, 0, p.get_mpz_t());
+  offset+= tmp;
+
+  return offset;
+}
+int Elgamal_SecretKey::serialize(char * buffer, int size){
+   //TODO: Remove redundant calls to mpz_sizeinbase
+  int count;
+  count  = (mpz_sizeinbase(h.get_mpz_t(), 2) + 7) / 8;
+  count += (mpz_sizeinbase(g.get_mpz_t(), 2) + 7) / 8;
+  count += (mpz_sizeinbase(q.get_mpz_t(), 2) + 7) / 8;
+  count += (mpz_sizeinbase(p.get_mpz_t(), 2) + 7) / 8;
+  count += (mpz_sizeinbase(x.get_mpz_t(), 2) + 7) / 8;
+
+  if(count + 5 > size){
+    return -1;
+  }
+  
+  unsigned int offset = 0;
+  *(buffer+offset) = (char)((mpz_sizeinbase(h.get_mpz_t(), 2) + 7) / 8);
+  offset += 1;
+  *(buffer+offset) = (char)((mpz_sizeinbase(g.get_mpz_t(), 2) + 7) / 8);
+  offset += 1;
+  *(buffer+offset) = (char)((mpz_sizeinbase(q.get_mpz_t(), 2) + 7) / 8);
+  offset += 1;
+  *(buffer+offset) = (char)((mpz_sizeinbase(p.get_mpz_t(), 2) + 7) / 8);
+  offset += 1;
+  *(buffer+offset) = (char)((mpz_sizeinbase(x.get_mpz_t(), 2) + 7) / 8);
+  offset += 1;
+
+  
+  size_t tmp;
+  mpz_export(buffer+offset, &tmp, 1, 1, 0, 0, h.get_mpz_t());
+  offset+= tmp;
+  mpz_export(buffer+offset, &tmp, 1, 1, 0, 0, g.get_mpz_t());
+  offset+= tmp;
+  mpz_export(buffer+offset, &tmp, 1, 1, 0, 0, q.get_mpz_t());
+  offset+= tmp;
+  mpz_export(buffer+offset, &tmp, 1, 1, 0, 0, p.get_mpz_t());
+  offset+= tmp;
+  mpz_export(buffer+offset, &tmp, 1, 1, 0, 0, x.get_mpz_t());
+  offset+= tmp;
+
+  
+  return offset;
+}
+
+bool Elgamal_PublicKey::deserialize(const char * buffer, const int length){
+  char lengths [4];
+  unsigned int offset = 0;
+  
+  int total = 0;
+  for(int i=0; i < 4; i++){
+    lengths[i] = *(buffer+offset);
+    offset += 1;
+
+    total += lengths[i];
+  }
+
+  // We need more data then given to us;
+  if(total + offset > length){
+    return false;
+  }  
+
+  mpz_import(h.get_mpz_t(), lengths[0], 1, 1, 0, 0, buffer+offset);
+  offset+= lengths[0];
+  mpz_import(g.get_mpz_t(), lengths[1], 1, 1, 0, 0, buffer+offset);
+  offset+= lengths[1];
+  mpz_import(q.get_mpz_t(), lengths[2], 1, 1, 0, 0, buffer+offset);
+  offset+= lengths[2];
+  mpz_import(p.get_mpz_t(), lengths[3], 1, 1, 0, 0, buffer+offset);
+  offset+= lengths[3];
+
+  return true;
+}
+bool Elgamal_SecretKey::deserialize(const char * buffer, const int length){
+  char lengths [5];
+  unsigned int offset = 0;
+  
+  int total = 0;
+  for(int i=0; i < 5; i++){
+    lengths[i] = *(buffer+offset);
+    offset += 1;
+
+    total += lengths[i];
+  }
+
+  // We need more data then given to us;
+  if(total + offset > length){
+    return false;
+  }  
+
+  mpz_import(h.get_mpz_t(), lengths[0], 1, 1, 0, 0, buffer+offset);
+  offset+= lengths[0];
+  mpz_import(g.get_mpz_t(), lengths[1], 1, 1, 0, 0, buffer+offset);
+  offset+= lengths[1];
+  mpz_import(q.get_mpz_t(), lengths[2], 1, 1, 0, 0, buffer+offset);
+  offset+= lengths[2];
+  mpz_import(p.get_mpz_t(), lengths[3], 1, 1, 0, 0, buffer+offset);
+  offset+= lengths[3];
+  mpz_import(x.get_mpz_t(), lengths[4], 1, 1, 0, 0, buffer+offset);
+  offset+= lengths[4];
+
   return true;
 }
