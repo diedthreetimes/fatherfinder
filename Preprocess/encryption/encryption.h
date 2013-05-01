@@ -37,6 +37,10 @@ class Encryption {
   // Homomorphic functions (these are all mutable)
   virtual Encryption * plus(Encryption * o) = 0;
   virtual Encryption * mult(mpz_class o) = 0;
+
+  virtual int serialize(char * buffer, int size) = 0;
+  virtual bool deserialize(const char * buffer, const int length, const PublicKey * pk) = 0;
+  
 };
 
 

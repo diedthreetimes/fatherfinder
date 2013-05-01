@@ -85,3 +85,38 @@ TEST(ElgamalTest, TestMultAdd){
   
   delete pk, sk, enc, e, e1;
 }
+
+TEST(ElgamalTest, Serialize){
+  EncryptionScheme * enc = new Elgamal(512);
+  PublicKey* pk = new Elgamal_PublicKey();
+  SecretKey* sk = new Elgamal_SecretKey();
+  Elgamal_Encryption* e = new Elgamal_Encryption();
+  Elgamal_Encryption* e1 = new Elgamal_Encryption();
+
+  enc->GenerateKeys(pk,sk);
+  
+  std::string msg = "hi there";
+  e->encrypt(msg,pk);
+  EXPECT_FALSE(e->isZero(sk));
+  
+  char *buffer = new char[255];
+  int length = e->serialize(buffer, 255);
+  EXPECT_NE( length, -1 );
+
+  EXPECT_FALSE( e1->deserialize(buffer, 2, pk) );
+
+  ASSERT_TRUE( e1->deserialize(buffer, length, pk) );
+  
+  EXPECT_EQ(e->c1, e1->c1);
+  EXPECT_EQ(e->c2, e1->c2);
+
+  delete [] buffer;
+  
+  buffer = new char[10];
+  length = e->serialize(buffer, 10);
+  EXPECT_EQ( length, -1);
+  
+  delete [] buffer;
+  
+  delete pk, sk, enc, e, e1;
+}

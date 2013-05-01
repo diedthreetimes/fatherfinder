@@ -3,6 +3,8 @@
 
 #define DEBUG true
 
+enum { SERIAL_E, SERIAL_PK, SERIAL_SK };
+
 // This should be global, although we reseed every time Elgamal is called
 gmp_randclass Elgamal::rr( gmp_randinit_default );
 
@@ -92,8 +94,57 @@ Encryption * Elgamal_Encryption::mult(mpz_class o){
   mpz_powm(tmp.get_mpz_t(), c1.get_mpz_t(), o.get_mpz_t(), p.get_mpz_t());
   c1 = tmp;
 
-  mpz_powm(tmp.get_mpz_t(),c2.get_mpz_t(), o.get_mpz_t(), p.get_mpz_t());
+  mpz_powm(tmp.get_mpz_t(), c2.get_mpz_t(), o.get_mpz_t(), p.get_mpz_t());
   c2 = tmp;
 
   return this;
+}
+
+int Elgamal_Encryption::serialize(char * buffer, int size){
+  //TODO: Remove redundant calls to mpz_sizeinbase
+  int count;
+  count  = (mpz_sizeinbase(c1.get_mpz_t(), 2) + 7) / 8;
+  count += (mpz_sizeinbase(c2.get_mpz_t(), 2) + 7) / 8;
+
+  if(count + 2 > size){
+    return -1;
+  }
+  
+  unsigned int offset = 0;
+  *buffer = (char)((mpz_sizeinbase(c1.get_mpz_t(), 2) + 7) / 8);
+  offset += 1;
+
+  *(buffer+offset) = (char)((mpz_sizeinbase(c2.get_mpz_t(), 2) + 7) / 8);
+  offset += 1;
+  
+  size_t tmp;
+  mpz_export(buffer+offset, &tmp, 1, 1, 0, 0, c1.get_mpz_t());
+  offset+= tmp;
+
+  mpz_export(buffer+offset, &tmp, 1, 1, 0, 0, c2.get_mpz_t());
+  offset+= tmp;
+
+  return offset;
+}
+bool Elgamal_Encryption::deserialize(const char * buffer, const int length, const PublicKey * pk){
+  p = ((Elgamal_PublicKey *)pk)->p;
+
+  char length1, length2;
+  unsigned int offset = 0;
+  length1 = *(buffer+offset);
+  offset += 1;
+  length2 = *(buffer+offset);
+  offset += 1;
+
+  // We need more data then given to us;
+  if(length1 + length2 + 2 > length){
+    return false;
+  }  
+
+  mpz_import(c1.get_mpz_t(), length1, 1, 1, 0, 0, buffer+offset);
+  offset+= length1;
+
+  std::cout << length2 << std::endl;
+  mpz_import(c2.get_mpz_t(), length2, 1, 1, 0, 0, buffer+offset);   
+  return true;
 }

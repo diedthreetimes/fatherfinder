@@ -49,9 +49,12 @@ class Elgamal_Encryption : public Encryption {
   virtual Encryption * plus(Encryption * o);
   virtual Encryption * mult(mpz_class o);
 
+  virtual int serialize(char * buffer, int size);
+  virtual bool deserialize(const char * buffer, const int length, const PublicKey * pk);
+
+  mpz_class c1, c2; // TODO: Make this protected and the test case a friend
   
  private:
-  mpz_class c1, c2;
   mpz_class p;
   virtual void encrypt(const char * msg, const unsigned int length, const Elgamal_PublicKey * pk);
 };
