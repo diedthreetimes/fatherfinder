@@ -34,5 +34,11 @@ add_subdirectory (encryption)
 
 add_executable(rflp rflp.cxx)
 add_executable(saveAsText saveAsTxt.cxx)
+add_executable(encryptGenome encryptGenome.cxx) 
+add_executable(shi-sm shi-sm.cxx) # This exe does not belong here but we piggy back anyways
+
+# if we need to link bamtools here than we may need to do a find package first
+target_link_libraries(shi-sm gmp encryption)
+target_link_libraries(encryptGenome gmp encryption)
 target_link_libraries(saveAsText Sequences bamtools)
-target_link_libraries (rflp Sequences bamtools) # if we need to link bamtools here than we need to do a find package first
+target_link_libraries(rflp Sequences bamtools) 

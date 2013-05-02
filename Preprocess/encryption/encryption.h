@@ -15,7 +15,7 @@
 class Key {
  public:
   virtual int serialize(char * buffer, int size) = 0;
-  virtual bool deserialize(const char * buffer, const int length) = 0;
+  virtual int deserialize(const char * buffer, const int length) = 0;
 };
 
 class PublicKey : public Key{
@@ -40,7 +40,7 @@ class Encryption {
   virtual Encryption * mult(mpz_class o) = 0;
 
   virtual int serialize(char * buffer, int size) = 0;
-  virtual bool deserialize(const char * buffer, const int length, const PublicKey * pk) = 0;
+  virtual int deserialize(const char * buffer, const int length, const PublicKey * pk) = 0;
   
 };
 

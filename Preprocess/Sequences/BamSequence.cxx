@@ -128,7 +128,6 @@ char BamSequence::calc_position(int i)
 
     if( m_reader.GetNextAlignment(m_alignments.back()) == false ){
       read_all = true;
-      std::cout << "Setting read_all" << std::endl;
       m_alignments.pop_back(); // The last alignment is invalid
     }
   }

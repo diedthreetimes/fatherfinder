@@ -5,7 +5,7 @@
 #include <BamSequence.h>
 
 using namespace std;
-void ussage(char* argv[]){
+void usage(char* argv[]){
   cout << argv[0] << " filename" << endl;
   cout << "EG:" << argv[0] << " mytest.bam" << endl;
   exit(1);
@@ -29,11 +29,11 @@ int main(int argc, const char* argv[] )
   // Loop through the genome
   char read = seq->begin();
 
-  cout << "Starting at position " << ((BamSequence *)seq)->Position() << endl;
+  cout << ((BamSequence *)seq)->Position() << endl;
   
-  cout << "BEGIN" << endl;
+  //cout << "BEGIN" << endl;
 
-  int p = 0;
+  int p = 1;
   do {
     // This may not be very efficient
     cout << read;
@@ -42,7 +42,7 @@ int main(int argc, const char* argv[] )
     p++;
   } while( read = seq->next() );
 
-  cout << "END" << endl;
-  cout << p << endl;
-  cout << "Ending position " << ((BamSequence *)seq)->Position() << endl;
+  //cout << endl << "END" << endl;
+  //cout << "Ending position " << ((BamSequence *)seq)->Position() << endl;
+  return 0;
 }

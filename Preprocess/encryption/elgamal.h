@@ -21,7 +21,7 @@ public:
   mpz_class h,g,q,x,p;
 
   virtual int serialize(char * buffer, int size);
-  virtual bool deserialize(const char * buffer, const int length);
+  virtual int deserialize(const char * buffer, const int length);
 };
 
 
@@ -35,7 +35,7 @@ class Elgamal_PublicKey : public PublicKey {
     mpz_class h,g,q,p;
 
     virtual int serialize(char * buffer, int size);
-    virtual bool deserialize(const char * buffer, const int length);
+    virtual int deserialize(const char * buffer, const int length);
 
 };
 
@@ -57,7 +57,7 @@ class Elgamal_Encryption : public Encryption {
   virtual Encryption * mult(mpz_class o);
 
   virtual int serialize(char * buffer, int size);
-  virtual bool deserialize(const char * buffer, const int length, const PublicKey * pk);
+  virtual int deserialize(const char * buffer, const int length, const PublicKey * pk);
 
   mpz_class c1, c2; // TODO: Make this protected and the test case a friend
   

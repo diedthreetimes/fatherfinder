@@ -82,6 +82,11 @@ TEST(ElgamalTest, TestMultAdd){
   e->plus(e1);
   EXPECT_TRUE(e->isZero(sk));
 
+  e->encrypt('T',pk);
+  e1->encrypt('T',pk);
+  e1->mult(-1);
+  e->plus(e1);
+  EXPECT_TRUE(e->isZero(sk));
   
   delete pk, sk, enc, e, e1;
 }
@@ -103,9 +108,9 @@ TEST(ElgamalTest, Serialize){
   int length = e->serialize(buffer, 255);
   EXPECT_NE( length, -1 );
 
-  EXPECT_FALSE( e1->deserialize(buffer, 2, pk) );
+  EXPECT_EQ(-1, e1->deserialize(buffer, 2, pk) );
 
-  ASSERT_TRUE( e1->deserialize(buffer, length, pk) );
+  ASSERT_EQ( length, e1->deserialize(buffer, length, pk) );
   
   EXPECT_EQ(e->c1, e1->c1);
   EXPECT_EQ(e->c2, e1->c2);
@@ -127,7 +132,7 @@ TEST(ElgamalTest, Serialize){
   
   ASSERT_NE( length, -1 );
  
-  EXPECT_TRUE(pk1->deserialize(buffer, length));
+  EXPECT_EQ(length, pk1->deserialize(buffer, length));
   EXPECT_EQ(((Elgamal_PublicKey *)pk)->p, pk1->p);  
   EXPECT_EQ(((Elgamal_PublicKey *)pk)->g, pk1->g);
   EXPECT_EQ(((Elgamal_PublicKey *)pk)->q, pk1->q);
@@ -140,7 +145,7 @@ TEST(ElgamalTest, Serialize){
   
   ASSERT_NE( length, -1 );
  
-  EXPECT_TRUE(sk1->deserialize(buffer, length));
+  EXPECT_EQ(length, sk1->deserialize(buffer, length));
   EXPECT_EQ(((Elgamal_SecretKey *)sk)->p, sk1->p);  
   EXPECT_EQ(((Elgamal_SecretKey *)sk)->q, sk1->q);  
   EXPECT_EQ(((Elgamal_SecretKey *)sk)->g, sk1->g);

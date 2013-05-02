@@ -126,7 +126,7 @@ int Elgamal_Encryption::serialize(char * buffer, int size){
 
   return offset;
 }
-bool Elgamal_Encryption::deserialize(const char * buffer, const int length, const PublicKey * pk){
+int Elgamal_Encryption::deserialize(const char * buffer, const int length, const PublicKey * pk){
   p = ((Elgamal_PublicKey *)pk)->p;
 
   char length1, length2;
@@ -138,14 +138,15 @@ bool Elgamal_Encryption::deserialize(const char * buffer, const int length, cons
 
   // We need more data then given to us;
   if(length1 + length2 + 2 > length){
-    return false;
+    return -1;
   }  
 
   mpz_import(c1.get_mpz_t(), length1, 1, 1, 0, 0, buffer+offset);
   offset+= length1;
 
   mpz_import(c2.get_mpz_t(), length2, 1, 1, 0, 0, buffer+offset);   
-  return true;
+  offset+= length2;
+  return offset;
 }
 
 int Elgamal_PublicKey::serialize(char * buffer, int size){
@@ -157,6 +158,8 @@ int Elgamal_PublicKey::serialize(char * buffer, int size){
   count += (mpz_sizeinbase(p.get_mpz_t(), 2) + 7) / 8;
 
   if(count + 4 > size){
+    std::cout << count << std::endl;
+    std::cout << size << std::endl;
     return -1;
   }
   
@@ -169,7 +172,6 @@ int Elgamal_PublicKey::serialize(char * buffer, int size){
   offset += 1;
   *(buffer+offset) = (char)((mpz_sizeinbase(p.get_mpz_t(), 2) + 7) / 8);
   offset += 1;
-
   
   size_t tmp;
   mpz_export(buffer+offset, &tmp, 1, 1, 0, 0, h.get_mpz_t());
@@ -225,7 +227,7 @@ int Elgamal_SecretKey::serialize(char * buffer, int size){
   return offset;
 }
 
-bool Elgamal_PublicKey::deserialize(const char * buffer, const int length){
+int Elgamal_PublicKey::deserialize(const char * buffer, const int length){
   char lengths [4];
   unsigned int offset = 0;
   
@@ -239,7 +241,7 @@ bool Elgamal_PublicKey::deserialize(const char * buffer, const int length){
 
   // We need more data then given to us;
   if(total + offset > length){
-    return false;
+    return -1;
   }  
 
   mpz_import(h.get_mpz_t(), lengths[0], 1, 1, 0, 0, buffer+offset);
@@ -251,9 +253,9 @@ bool Elgamal_PublicKey::deserialize(const char * buffer, const int length){
   mpz_import(p.get_mpz_t(), lengths[3], 1, 1, 0, 0, buffer+offset);
   offset+= lengths[3];
 
-  return true;
+  return offset;
 }
-bool Elgamal_SecretKey::deserialize(const char * buffer, const int length){
+int Elgamal_SecretKey::deserialize(const char * buffer, const int length){
   char lengths [5];
   unsigned int offset = 0;
   
@@ -267,7 +269,7 @@ bool Elgamal_SecretKey::deserialize(const char * buffer, const int length){
 
   // We need more data then given to us;
   if(total + offset > length){
-    return false;
+    return -1;
   }  
 
   mpz_import(h.get_mpz_t(), lengths[0], 1, 1, 0, 0, buffer+offset);
@@ -281,5 +283,5 @@ bool Elgamal_SecretKey::deserialize(const char * buffer, const int length){
   mpz_import(x.get_mpz_t(), lengths[4], 1, 1, 0, 0, buffer+offset);
   offset+= lengths[4];
 
-  return true;
+  return offset;
 }
