@@ -18,11 +18,22 @@ void usage(const char* argv[]){
 
 // DNA holder
 void bob(SecretKey *sk, Encryption * acc) {
-
+  
+  if(acc->isZero(sk)){
+    std::cout << "Match Found!" << std::endl;
+  }else {
+    std::cout << "Match Not Found!" << std::endl;
+  }
 }
 
 // Pattern holder
 void alice(const string privKeyFile, const string inputFile) {
+
+  // Alices pattern
+  int l = 9993+3581;
+  string pattern = "TACAAAGGTGAAACCCAGGAGAGT";
+  //    
+
   ifstream ifs(inputFile.c_str(), ios::in | ios::binary);
 
   // Read and send the starting position 
@@ -36,8 +47,6 @@ void alice(const string privKeyFile, const string inputFile) {
   SecretKey* sk = new Elgamal_SecretKey();
   
 
-  Encryption* e  = new Elgamal_Encryption();  
-  Encryption* ep = new Elgamal_Encryption();  
   char * buffer = new char[512];
   int length;
 
@@ -52,11 +61,27 @@ void alice(const string privKeyFile, const string inputFile) {
   
   skf.close();
 
-
-  // Read and send 
   
-  int offset = 0;
-  int expected_length = 200;
+  char alphabet [6] = "ACGTN";
+  Encryption * eAlphabet [5];
+
+  for(int i = 0; i < 5; i++){
+    eAlphabet[i] = new Elgamal_Encryption();
+    eAlphabet[i]->encrypt(alphabet[i], pk);
+    eAlphabet[i]->mult(-1);
+  }
+
+  int pattern_offset = 0; // Our current position in the pattern
+  
+  
+  Encryption* acc  = new Elgamal_Encryption();  
+  acc->encrypt(0, pk);
+  
+  Encryption* e  = new Elgamal_Encryption();  
+  int offset = 0; // Used for buffer managment
+  int expected_length = 200; // The maximal length of an encryption
+
+  mpz_class r;
   do {
     ifs.read(buffer+offset, expected_length-offset);
     length = e->deserialize(buffer, expected_length, pk);
@@ -65,30 +90,56 @@ void alice(const string privKeyFile, const string inputFile) {
     offset = expected_length-length;
     memcpy(buffer, buffer+length, expected_length - length);
 
-    ep->encrypt('T', pk);
-    ep->mult(-1);
-
-    e->plus(ep);
-
-    //TODO: Here we need to add to acc
     
-    if(e->isZero(sk)){
-      std::cout << "Correct" << std::endl;
-    }else{
+    if( position == (l + pattern_offset)) {
+      bool found = false;
+      for(uint i=0; i < 5; i++){
+	if( pattern[pattern_offset] == alphabet[i] ){
+	  e->plus(eAlphabet[i]);
+	  found = true;
+	}
+      }
 
+      if(!found){
+	cout << "Pattern did not mach any position" << endl;
+	exit(-1);
+      }
+
+      // If we include position then we don't have to use seperate r. Otherwise we do, since we get cross cancelation.
+      // TODO: Add to encryption a "random element" api
+      r = Elgamal::rr.get_z_range(((Elgamal_PublicKey *)pk)->p);
+      e->mult(r);
+
+      acc->plus(e);
+      
+      // Test code
+      // if(acc->isZero(sk)){
+      // 	std::cout << "Correct "<< position << std::endl;
+      // }
+      // else{
+      // 	std::cout << "Wrong " << position << std::endl;
+      // }
+
+      pattern_offset++;
+
+      // Are we are done?
+      if( pattern_offset >= pattern.length() )
+	pattern_offset = 0;
     }
-
-    // END TODO:
-
+    
+    position += 1;
   }while(!ifs.eof());
 
 
   ifs.close();
 
   // This should be a tcp connection, but for this prototype it need not be
-  //bob
-  
-  delete pk,sk,e;
+  bob(sk, acc);
+
+  for(int i=0; i < 5; i++)
+    delete eAlphabet[i];
+
+  delete pk,sk,e, acc;
   delete [] buffer;
 }
 
