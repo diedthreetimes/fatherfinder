@@ -82,6 +82,10 @@ void alice(const string privKeyFile, const string inputFile) {
   int expected_length = 200; // The maximal length of an encryption
 
   mpz_class r;
+
+  // TODO: Go directly to the pattern location
+  // TODO: Make sure to use fixed with deserialization
+  // TODO: This will also make the read code much simpler
   do {
     ifs.read(buffer+offset, expected_length-offset);
     length = e->deserialize(buffer, expected_length, pk);
@@ -112,20 +116,12 @@ void alice(const string privKeyFile, const string inputFile) {
 
       acc->plus(e);
       
-      // Test code
-      // if(acc->isZero(sk)){
-      // 	std::cout << "Correct "<< position << std::endl;
-      // }
-      // else{
-      // 	std::cout << "Wrong " << position << std::endl;
-      // }
-
       pattern_offset++;
-
-      // Are we are done?
-      if( pattern_offset >= pattern.length() )
-	pattern_offset = 0;
     }
+
+    // Are we are done?
+    if( pattern_offset >= pattern.length() )
+      break;
     
     position += 1;
   }while(!ifs.eof());

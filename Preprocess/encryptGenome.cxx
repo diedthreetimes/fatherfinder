@@ -70,6 +70,8 @@ int main(int argc, const char* argv[] )
       
       length = e->serialize(buffer, 512);
       
+      // TODO: Make sure every buffer is the same size
+      // 82 works for 1024bit security
       ofs.write(buffer, length);
     }
     bp = ifs.get();  
