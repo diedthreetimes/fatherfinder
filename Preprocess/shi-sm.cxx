@@ -3,7 +3,13 @@
 #include <fstream>
 #include "elgamal.h"
 #include "cstdlib"
+#include <ctime>
+#include <sys/time.h>
+#include <stdio.h>
+#include <unistd.h>
 
+#define ONLINE_MULTS
+// #define NO_OPT
 
 // Run the genomic-privacy protocol
 // Here we don't actually do any data transfer! Primarily, this is because entire data file can easily be transfered using some other means
@@ -30,9 +36,17 @@ void bob(SecretKey *sk, Encryption * acc) {
 void alice(const string privKeyFile, const string inputFile) {
 
   // Alices pattern
-  int l = 9993+3581;
-  string pattern = "TACAAAGGTGAAACCCAGGAGAGT";
-  //    
+  // This is a matching pattern
+  // int l = 9993+3581;
+  // string pattern = "TACAAAGGTGAAACCCAGGAGAGT";
+  
+  // This is a test pattern
+  int l = 9993;
+  string pattern = "";
+  for(int i=0; i < 10000000; i++){
+    pattern += "A";
+  }
+      
 
   ifstream ifs(inputFile.c_str(), ios::in | ios::binary);
 
@@ -61,15 +75,38 @@ void alice(const string privKeyFile, const string inputFile) {
   
   skf.close();
 
-  
   char alphabet [6] = "ACGTN";
+  
+  struct timeval start, end;
+  long mtime, seconds, useconds;
+  gettimeofday(&start,NULL);
+#ifdef NO_OPT
+  Encryption * tmp = new Elgamal_Encryption();
+#elif defined ONLINE_MULTS
+  Encryption **ePattern = new Encryption * [pattern.size()];
+  for(int i =0; i < pattern.size(); i++){
+    std::string tmp = pattern[i] + "|" + (char)i;
+    ePattern[i] = new Elgamal_Encryption();
+    ePattern[i]-> encrypt(pattern[i],pk); //TODO: This should encrypt the result of a hash.
+    ePattern[i]->mult(-1);
+  }
+#else
+  // When doing full protocol we only need to encrypt once
   Encryption * eAlphabet [5];
-
+  
   for(int i = 0; i < 5; i++){
     eAlphabet[i] = new Elgamal_Encryption();
     eAlphabet[i]->encrypt(alphabet[i], pk);
     eAlphabet[i]->mult(-1);
   }
+#endif
+  gettimeofday(&end,NULL);
+  
+  seconds = end.tv_sec - start.tv_sec;
+  useconds = end.tv_usec - start.tv_usec;
+  
+  double elapsed_secs  = ((seconds) * 1000 + (double)useconds/1000.0);
+  cout << "Pattern Preprocessing time: " << elapsed_secs << " milli seconds" << endl;
 
   int pattern_offset = 0; // Our current position in the pattern
   
@@ -82,6 +119,9 @@ void alice(const string privKeyFile, const string inputFile) {
   int expected_length = 200; // The maximal length of an encryption
 
   mpz_class r;
+
+
+  gettimeofday(&start,NULL);
 
   // TODO: Go directly to the pattern location
   // TODO: Make sure to use fixed with deserialization
@@ -99,10 +139,18 @@ void alice(const string privKeyFile, const string inputFile) {
       bool found = false;
       for(uint i=0; i < 5; i++){
 	if( pattern[pattern_offset] == alphabet[i] ){
+#ifdef NO_OPT
+	  tmp->encrypt(alphabet[i], pk);
+	  tmp->mult(-1);
+	  e->plus(tmp);
+#elif defined ONLINE_MULTS
+	  *e = *(ePattern[pattern_offset]);
+#else
 	  e->plus(eAlphabet[i]);
+#endif
 	  found = true;
 	}
-      }
+     }
 
       if(!found){
 	cout << "Pattern did not mach any position" << endl;
@@ -111,9 +159,11 @@ void alice(const string privKeyFile, const string inputFile) {
 
       // If we include position then we don't have to use seperate r. Otherwise we do, since we get cross cancelation.
       // TODO: Add to encryption a "random element" api
+
+#ifndef ONLINE_MULTS 
       r = Elgamal::rr.get_z_range(((Elgamal_PublicKey *)pk)->p);
       e->mult(r);
-
+#endif
       acc->plus(e);
       
       pattern_offset++;
@@ -126,14 +176,33 @@ void alice(const string privKeyFile, const string inputFile) {
     position += 1;
   }while(!ifs.eof());
 
+#ifdef ONLINE_MULTS
+  r = Elgamal::rr.get_z_range(((Elgamal_PublicKey *)pk)->p);
+  acc->mult(r);	  
+#endif
 
   ifs.close();
 
   // This should be a tcp connection, but for this prototype it need not be
   bob(sk, acc);
 
+  gettimeofday(&end,NULL);
+
+  seconds = end.tv_sec - start.tv_sec;
+  useconds = end.tv_usec - start.tv_usec;
+  
+  elapsed_secs  = ((seconds) * 1000 + (double)useconds/1000.0);
+  cout << "Online time: " << elapsed_secs << " milli seconds" << endl;
+
+#ifdef NO_OPT
+  delete tmp;
+#elif defined ONLINE_MULTS
+  for(int i=0; i < pattern.size(); i++)
+    delete ePattern[i];
+#else
   for(int i=0; i < 5; i++)
     delete eAlphabet[i];
+#endif
 
   delete pk,sk,e, acc;
   delete [] buffer;
