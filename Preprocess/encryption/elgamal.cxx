@@ -25,19 +25,28 @@ void Elgamal::GenerateKeys(Elgamal_PublicKey * pk, Elgamal_SecretKey * sk){
   // First Generate the keys
   do {
     do {
-      sk->q = rr.get_z_bits(security/2);
+      sk->q = rr.get_z_bits(170); // this may not be true for other security paramaters TODO:
     }while(mpz_probab_prime_p(sk->q.get_mpz_t(),100) == 0);
 
-    sk->p = (2*sk->q)+1;
+    sk->p = (6*sk->q)+1;// This breaks tests todo!
   } while(mpz_probab_prime_p(sk->p.get_mpz_t(),100) == 0);
 
   // Find the generator
   mpz_class res;
+  mpz_class tmp;
   do {
+
     sk->g = rr.get_z_range(sk->p);
+    
+    tmp = ((sk->p-1)/sk->q);
+    // g = h^(p-1)/q
+    mpz_powm(res.get_mpz_t(), sk->g.get_mpz_t(), tmp.get_mpz_t(), sk->p.get_mpz_t());
+    sk->g = res;
+
     if(sk->g == 1)
       continue;
     
+    // Check the order of g
     mpz_powm(res.get_mpz_t(), sk->g.get_mpz_t(), sk->q.get_mpz_t(), sk->p.get_mpz_t());
   } while(res != 1);
   
@@ -62,7 +71,7 @@ void Elgamal_Encryption::encrypt(const char * msg, const unsigned int length, co
   mpz_class m;
   mpz_import(m.get_mpz_t(), length, 1, 1, 0, 0, msg);
   
-  mpz_class r = Elgamal::rr.get_z_range(pk->p);
+  mpz_class r = Elgamal::rr.get_z_range(pk->q);
   
   // c1 = g^r
   mpz_powm(c1.get_mpz_t(), pk->g.get_mpz_t(), r.get_mpz_t(), pk->p.get_mpz_t());

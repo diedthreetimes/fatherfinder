@@ -92,7 +92,7 @@ TEST(ElgamalTest, TestMultAdd){
 }
 
 TEST(ElgamalTest, Serialize){
-  EncryptionScheme * enc = new Elgamal(512);
+  EncryptionScheme * enc = new Elgamal(1024);
   PublicKey* pk = new Elgamal_PublicKey();
   SecretKey* sk = new Elgamal_SecretKey();
   Elgamal_Encryption* e = new Elgamal_Encryption();
@@ -104,8 +104,8 @@ TEST(ElgamalTest, Serialize){
   e->encrypt(msg,pk);
   EXPECT_FALSE(e->isZero(sk));
   
-  char *buffer = new char[255];
-  int length = e->serialize(buffer, 255);
+  char *buffer = new char[512];
+  int length = e->serialize(buffer, 512);
   EXPECT_NE( length, -1 );
 
   EXPECT_EQ(-1, e1->deserialize(buffer, 2, pk) );
@@ -128,7 +128,7 @@ TEST(ElgamalTest, Serialize){
   Elgamal_SecretKey* sk1 = new Elgamal_SecretKey();
 
   buffer = new char [255];
-  length = pk->serialize(buffer, 255);
+  length = pk->serialize(buffer, 512);
   
   ASSERT_NE( length, -1 );
  
@@ -140,8 +140,8 @@ TEST(ElgamalTest, Serialize){
   
   delete [] buffer;
   
-  buffer = new char [255];
-  length = sk->serialize(buffer, 255);
+  buffer = new char [512];
+  length = sk->serialize(buffer, 512);
   
   ASSERT_NE( length, -1 );
  

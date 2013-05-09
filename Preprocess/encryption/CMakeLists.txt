@@ -1,9 +1,10 @@
 option(encryption_build_tests "Build all of encryption's unit tests." OFF)
 
-add_library (encryption elgamal.cxx)
+add_library (encryption elgamal.cxx ecelgamal.cxx)
 
 find_package(GTest)
 include_directories (${GTEST_INCLUDE_DIRS})
 link_directories (${GTEST_LIBRARIES})
 
 add_gtest(elgamal_test encryption encryption gmp gmpxx)
+add_gtest(ecelgamal_test encryption encryption gmp gmpxx crypto)

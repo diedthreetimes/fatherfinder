@@ -2,7 +2,18 @@
 #include <iostream>
 #include <fstream>
 #include "elgamal.h"
+#include "ecelgamal.h"
 #include "cstdlib"
+
+// #define USE_ECC
+
+#ifdef USE_ECC
+#define ENC_SIZE 44
+#else
+#define ENC_SIZE 132 
+#endif
+
+#define SK_ONLY
 
 using namespace std;
 void usage(const char* argv[]){
@@ -15,6 +26,20 @@ int main(int argc, const char* argv[] )
 {
   if(argc < 3 )
     usage(argv);
+
+  #ifdef USE_ECC
+  typedef ECElgamal scheme;
+  typedef ECElgamal_PublicKey PK;
+  typedef ECElgamal_SecretKey SK;
+  typedef ECElgamal_Encryption Enc;
+  int security = 160;
+  #else
+  typedef Elgamal scheme;
+  typedef Elgamal_PublicKey PK;
+  typedef Elgamal_SecretKey SK;
+  typedef Elgamal_Encryption Enc;
+  int security = 1024;
+  #endif
 
   std::string inFilename = argv[1];
   std::string outFilename = argv[2];
@@ -34,10 +59,10 @@ int main(int argc, const char* argv[] )
   int position = atoi(line.c_str());
   cout << "Starting at: " << position << endl;
 
-  EncryptionScheme * enc = new Elgamal(1024);
-  PublicKey* pk = new Elgamal_PublicKey();
-  SecretKey* sk = new Elgamal_SecretKey();
-  Encryption* e = new Elgamal_Encryption();  
+  EncryptionScheme * enc = new scheme(security);
+  PublicKey* pk = new PK();
+  SecretKey* sk = new SK();
+  Encryption* e = new Enc();  
   char *buffer = new char[512];
   int length;
 
@@ -46,11 +71,14 @@ int main(int argc, const char* argv[] )
   ofstream skf(privKeyFile.c_str(), ios::out | ios::binary);
   ofstream pkf(pubKeyFile.c_str(), ios::out | ios::binary);
   
-  int key_length = pk->serialize(buffer, 512);
+  int key_length;
+#ifndef SK_ONLY
+  key_length = pk->serialize(buffer, 512);
   if(key_length == -1){
     exit(-1);
   }
   pkf.write(buffer, key_length);
+#endif
   
   key_length = sk->serialize(buffer, 512);
   if(key_length == -1) {
@@ -64,15 +92,16 @@ int main(int argc, const char* argv[] )
 
   char bp = ifs.get();
   while(ifs.good()) {
+    memset(buffer,0,ENC_SIZE);
+
     // Also do lower case letters
     if(bp=='A' || bp== 'G' || bp == 'C' || bp == 'T' || bp == 'N' ){
       e->encrypt(bp,pk);
       
-      length = e->serialize(buffer, 512);
+      length = e->serialize(buffer, ENC_SIZE);
       
-      // TODO: Make sure every buffer is the same size
-      // 82 works for 1024bit security
-      ofs.write(buffer, length);
+      // We need to align the encryptions
+      ofs.write(buffer, ENC_SIZE);
     }
     bp = ifs.get();  
   }

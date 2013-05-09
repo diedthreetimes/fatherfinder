@@ -1,14 +1,38 @@
 #include <string>
 #include <iostream>
 #include <fstream>
-#include "elgamal.h"
 #include "cstdlib"
 #include <ctime>
 #include <sys/time.h>
 #include <stdio.h>
 #include <unistd.h>
+#include "elgamal.h"
+#include "ecelgamal.h"
 
-#define ONLINE_MULTS
+
+// #define USE_ECC
+
+#ifdef USE_ECC
+#define ENC_SIZE 44
+#else
+#define ENC_SIZE 132
+#endif
+
+#ifdef USE_ECC
+typedef ECElgamal scheme;
+typedef ECElgamal_PublicKey PK;
+typedef ECElgamal_SecretKey SK;
+typedef ECElgamal_Encryption Enc;
+int security = 160;
+#else
+typedef Elgamal scheme;
+typedef Elgamal_PublicKey PK;
+typedef Elgamal_SecretKey SK;
+typedef Elgamal_Encryption Enc;
+int security = 1024;
+#endif
+
+// #define ONLINE_MULTS
 // #define NO_OPT
 
 // Run the genomic-privacy protocol
@@ -21,6 +45,8 @@ void usage(const char* argv[]){
   cout << "\tEG:" << argv[0] << " mytest.txt" << "mytest.out" << endl;
   exit(1);
 }
+
+gmp_randclass rr( gmp_randinit_default );
 
 // DNA holder
 void bob(SecretKey *sk, Encryption * acc) {
@@ -37,15 +63,15 @@ void alice(const string privKeyFile, const string inputFile) {
 
   // Alices pattern
   // This is a matching pattern
-  // int l = 9993+3581;
-  // string pattern = "TACAAAGGTGAAACCCAGGAGAGT";
+  int l = 9993+3581;
+  string pattern = "TACAAAGGTGAAACCCAGGAGAGT";
   
   // This is a test pattern
-  int l = 9993;
-  string pattern = "";
-  for(int i=0; i < 10000000; i++){
-    pattern += "A";
-  }
+  // int l = 9993;
+  // string pattern = "";
+  // for(int i=0; i < 10; i++){
+  //   pattern += "A";
+  // }
       
 
   ifstream ifs(inputFile.c_str(), ios::in | ios::binary);
@@ -58,7 +84,7 @@ void alice(const string privKeyFile, const string inputFile) {
   int position = atoi(line);
   
   cout << "Starting at postiion " << position << endl;
-  SecretKey* sk = new Elgamal_SecretKey();
+  SecretKey* sk = new SK();
   
 
   char * buffer = new char[512];
@@ -71,7 +97,9 @@ void alice(const string privKeyFile, const string inputFile) {
     cout << "Secret key read incorectly" << std::endl;
     exit(-1);
   }
-  PublicKey* pk = new Elgamal_PublicKey(*(Elgamal_SecretKey*)sk);
+  PublicKey* pk = new PK(*(SK*)sk);
+  //  PublicKey* pk = new PK();  
+  //  ((ECElgamal_PublicKey*)pk)->init(*(SK*)sk);
   
   skf.close();
 
@@ -81,12 +109,12 @@ void alice(const string privKeyFile, const string inputFile) {
   long mtime, seconds, useconds;
   gettimeofday(&start,NULL);
 #ifdef NO_OPT
-  Encryption * tmp = new Elgamal_Encryption();
+  Encryption * tmp = new Enc();
 #elif defined ONLINE_MULTS
   Encryption **ePattern = new Encryption * [pattern.size()];
   for(int i =0; i < pattern.size(); i++){
     std::string tmp = pattern[i] + "|" + (char)i;
-    ePattern[i] = new Elgamal_Encryption();
+    ePattern[i] = new Enc();
     ePattern[i]-> encrypt(pattern[i],pk); //TODO: This should encrypt the result of a hash.
     ePattern[i]->mult(-1);
   }
@@ -95,7 +123,7 @@ void alice(const string privKeyFile, const string inputFile) {
   Encryption * eAlphabet [5];
   
   for(int i = 0; i < 5; i++){
-    eAlphabet[i] = new Elgamal_Encryption();
+    eAlphabet[i] = new Enc();
     eAlphabet[i]->encrypt(alphabet[i], pk);
     eAlphabet[i]->mult(-1);
   }
@@ -111,12 +139,11 @@ void alice(const string privKeyFile, const string inputFile) {
   int pattern_offset = 0; // Our current position in the pattern
   
   
-  Encryption* acc  = new Elgamal_Encryption();  
+  Encryption* acc  = new Enc();  
   acc->encrypt(0, pk);
   
-  Encryption* e  = new Elgamal_Encryption();  
+  Encryption* e  = new Enc();  
   int offset = 0; // Used for buffer managment
-  int expected_length = 200; // The maximal length of an encryption
 
   mpz_class r;
 
@@ -126,15 +153,14 @@ void alice(const string privKeyFile, const string inputFile) {
   // TODO: Go directly to the pattern location
   // TODO: Make sure to use fixed with deserialization
   // TODO: This will also make the read code much simpler
+  ifs.seekg((l-position)*ENC_SIZE, ifs.cur);
+  position = l;
+  // cout << position << endl;
+  // cout << ifs.tellg() << endl;
   do {
-    ifs.read(buffer+offset, expected_length-offset);
-    length = e->deserialize(buffer, expected_length, pk);
-
-    // move the bit that we already read to the begginning of the buffer
-    offset = expected_length-length;
-    memcpy(buffer, buffer+length, expected_length - length);
-
-    
+    ifs.read(buffer, ENC_SIZE);
+    length = e->deserialize(buffer, ENC_SIZE, pk);
+        
     if( position == (l + pattern_offset)) {
       bool found = false;
       for(uint i=0; i < 5; i++){
@@ -161,7 +187,14 @@ void alice(const string privKeyFile, const string inputFile) {
       // TODO: Add to encryption a "random element" api
 
 #ifndef ONLINE_MULTS 
-      r = Elgamal::rr.get_z_range(((Elgamal_PublicKey *)pk)->p);
+
+      #ifdef USE_ECC
+//TODO: Add a get order function
+      r = ::rr.get_z_bits(160);// THIS IS NOT SECURE it should be order but too complicated for now!!
+      #else
+      r = ::rr.get_z_range(((PK *)pk)->q);
+      #endif
+
       e->mult(r);
 #endif
       acc->plus(e);
@@ -177,7 +210,12 @@ void alice(const string privKeyFile, const string inputFile) {
   }while(!ifs.eof());
 
 #ifdef ONLINE_MULTS
-  r = Elgamal::rr.get_z_range(((Elgamal_PublicKey *)pk)->p);
+  #ifdef USE_ECC
+  r = ::rr.get_z_bits(160);
+  #else
+  r = ::rr.get_z_range(((PK *)pk)->q);
+  #endif
+
   acc->mult(r);	  
 #endif
 
@@ -203,7 +241,7 @@ void alice(const string privKeyFile, const string inputFile) {
   for(int i=0; i < 5; i++)
     delete eAlphabet[i];
 #endif
-
+  
   delete pk,sk,e, acc;
   delete [] buffer;
 }
@@ -213,6 +251,8 @@ int main(int argc, const char* argv[] )
   if(argc < 1 )
     usage(argv);
 
+  ::rr.seed(time(NULL));
+
   std::string inFilename = argv[1];
   
   string pubKeyFile = "genome.pub";
@@ -220,7 +260,8 @@ int main(int argc, const char* argv[] )
 
   // At this stage alice has recieved the dna and needs to process it
   alice(privKeyFile, inFilename);
-  
+  // Seg fault when alic exits??
+
   return 0;
   
 }
