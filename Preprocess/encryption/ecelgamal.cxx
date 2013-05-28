@@ -61,8 +61,10 @@ void ECElgamal_Encryption::encrypt(const char * msg, const unsigned int length, 
   BIGNUM *order = NULL;
   BN_CTX * ctx = NULL;
 
-  c1 = EC_POINT_new(group);
-  c2 = EC_POINT_new(group);
+  if( c1 == NULL)
+    c1 = EC_POINT_new(group);
+  if( c2 == NULL)
+    c2 = EC_POINT_new(group);
   r = BN_new();
   //  m = BN_new();
 
@@ -98,6 +100,8 @@ void ECElgamal_Encryption::encrypt(const char * msg, const unsigned int length, 
     std::cerr << "h^r * g^m failed" << std::endl;		   
   BN_free(r);
   BN_free(m);
+  BN_free(order);
+  delete [] buffer;
 }
 
 bool ECElgamal_Encryption::isZero(const SecretKey * sk){

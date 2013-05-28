@@ -7,3 +7,6 @@ bin/
 cmake_install.cmake
 *.a
 Testing/
+
+ectest/
+igtest/

@@ -35,7 +35,7 @@ public:
 class ECElgamal_PublicKey : public PublicKey {
   public:
     ECElgamal_PublicKey();
-    ~ECElgamal_PublicKey();
+    virtual ~ECElgamal_PublicKey();
 
     ECElgamal_PublicKey(const ECElgamal_SecretKey &sk);
     ECElgamal_PublicKey(const ECElgamal_PublicKey &pk);
@@ -55,7 +55,7 @@ class ECElgamal_PublicKey : public PublicKey {
 class ECElgamal_Encryption : public Encryption {
  public:
   ECElgamal_Encryption();
-  ~ECElgamal_Encryption();
+  virtual ~ECElgamal_Encryption();
   ECElgamal_Encryption(ECElgamal_Encryption & o)  { std::cerr << "NEED TO IMPLEMENT CONSTRUCTOR" << std::endl;}
   ECElgamal_Encryption(EC_POINT * _c1, EC_POINT * _c2)  { std::cerr << "NEED TO IMPLEMENT COPY" << std::endl;}
 

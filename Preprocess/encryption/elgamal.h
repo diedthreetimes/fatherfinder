@@ -30,6 +30,7 @@ class Elgamal_PublicKey : public PublicKey {
     Elgamal_PublicKey() {}
 
     Elgamal_PublicKey(Elgamal_SecretKey sk): h(sk.h), g(sk.g), q(sk.q), p(sk.p){ }
+    virtual ~Elgamal_PublicKey() {}
 
 
     mpz_class h,g,q,p;

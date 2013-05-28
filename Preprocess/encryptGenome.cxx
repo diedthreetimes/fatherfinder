@@ -5,7 +5,7 @@
 #include "ecelgamal.h"
 #include "cstdlib"
 
-// #define USE_ECC
+#define USE_ECC
 
 #ifdef USE_ECC
 #define ENC_SIZE 44
@@ -109,6 +109,10 @@ int main(int argc, const char* argv[] )
   ifs.close();
   ofs.close();
   
-  delete enc,pk,sk,e;
+  delete [] buffer;
+  delete enc;
+  delete pk;
+  delete sk;
+  delete e;
   return 0;
 }

@@ -19,9 +19,13 @@ class Key {
 };
 
 class PublicKey : public Key{
+ public:
+  virtual ~PublicKey() { }
 };
 
 class SecretKey : public Key{
+ public:
+  virtual ~SecretKey() {}
 };
 
 class Encryption {
