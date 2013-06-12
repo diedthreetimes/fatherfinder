@@ -5,7 +5,7 @@
 #include "ecelgamal.h"
 #include "cstdlib"
 
-#define USE_ECC
+// #define USE_ECC
 
 #ifdef USE_ECC
 #define ENC_SIZE 44

@@ -10,7 +10,7 @@
 #include "ecelgamal.h"
 
 
-// #define USE_ECC
+#define USE_ECC
 
 #ifdef USE_ECC
 #define ENC_SIZE 44
@@ -33,7 +33,7 @@ int security = 1024;
 #endif
 
 // #define ONLINE_MULTS
-// #define NO_OPT
+#define NO_OPT
 
 // Run the genomic-privacy protocol
 // Here we don't actually do any data transfer! Primarily, this is because entire data file can easily be transfered using some other means
@@ -41,7 +41,7 @@ int security = 1024;
 // As a consequence of this, we simulate all communication. Including sending the final accumulator.
 using namespace std;
 void usage(const char* argv[]){
-  cout << "USAGE: " << argv[0] << " filename" << endl;
+  cout << "USAGE: " << argv[0] << " filename [length]" << endl;
   cout << "\tEG:" << argv[0] << " mytest.txt" << "mytest.out" << endl;
   exit(1);
 }
@@ -59,19 +59,27 @@ void bob(SecretKey *sk, Encryption * acc) {
 }
 
 // Pattern holder
-void alice(const string privKeyFile, const string inputFile) {
+void alice(const string privKeyFile, const string inputFile, int pattern_length = 10) {
+  
+  #ifdef NO_OPT
+  cout << "No optimization" << endl;
+  #elif ONLINE_MULTS 
+  cout << "Mult only for online phase" << endl;
+  #else
+  cout << "No key knowledge optimization" << endl;
+  #endif
 
   // Alices pattern
   // This is a matching pattern
-  int l = 9993+3581;
-  string pattern = "TACAAAGGTGAAACCCAGGAGAGT";
+  // int l = 9993+3581;
+  // string pattern = "TACAAAGGTGAAACCCAGGAGAGT";
   
   // This is a test pattern
-  // int l = 9993;
-  // string pattern = "";
-  // for(int i=0; i < 10; i++){
-  //   pattern += "A";
-  // }
+  int l = 9993;
+  string pattern = "";
+  for(int i=0; i < pattern_length; i++){
+    pattern += "A";
+  }
       
 
   ifstream ifs(inputFile.c_str(), ios::in | ios::binary);
@@ -242,7 +250,10 @@ void alice(const string privKeyFile, const string inputFile) {
     delete eAlphabet[i];
 #endif
   
-  delete pk,sk,e, acc;
+  delete pk;
+  delete sk;
+  delete e;
+  delete acc;
   delete [] buffer;
 }
 
@@ -253,13 +264,14 @@ int main(int argc, const char* argv[] )
 
   ::rr.seed(time(NULL));
 
-  std::string inFilename = argv[1];
+  std::string inFilename(argv[1]);
+  int pattern_length = atoi(argv[2]);
   
   string pubKeyFile = "genome.pub";
   string privKeyFile = "genome.priv";
 
   // At this stage alice has recieved the dna and needs to process it
-  alice(privKeyFile, inFilename);
+  alice(privKeyFile, inFilename, pattern_length);
   // Seg fault when alic exits??
 
   return 0;

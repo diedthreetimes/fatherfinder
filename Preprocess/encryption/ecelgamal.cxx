@@ -324,11 +324,9 @@ int ECElgamal_SecretKey::deserialize(const char * buffer, const int length){
     return -1;
   }
 
-  const unsigned char ** tmp;
-  *tmp = (unsigned char *)buffer+offset;
-  key = d2i_ECPrivateKey(&key, tmp,length);
+  unsigned char * tmp = (unsigned char *)buffer+offset;
+  key = d2i_ECPrivateKey(&key, const_cast<const unsigned char **>(&tmp),length);
   offset+= count;
-
   
   return offset;
 }
