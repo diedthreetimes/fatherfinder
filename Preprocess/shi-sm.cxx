@@ -10,7 +10,7 @@
 #include "ecelgamal.h"
 
 
-#define USE_ECC
+// #define USE_ECC
 
 #ifdef USE_ECC
 #define ENC_SIZE 44
@@ -32,8 +32,8 @@ typedef Elgamal_Encryption Enc;
 int security = 1024;
 #endif
 
-// #define ONLINE_MULTS
-#define NO_OPT
+#define ONLINE_MULTS
+// #define NO_OPT
 
 // Run the genomic-privacy protocol
 // Here we don't actually do any data transfer! Primarily, this is because entire data file can easily be transfered using some other means
@@ -63,7 +63,7 @@ void alice(const string privKeyFile, const string inputFile, int pattern_length 
   
   #ifdef NO_OPT
   cout << "No optimization" << endl;
-  #elif ONLINE_MULTS 
+  #elif defined ONLINE_MULTS 
   cout << "Mult only for online phase" << endl;
   #else
   cout << "No key knowledge optimization" << endl;
@@ -245,6 +245,8 @@ void alice(const string privKeyFile, const string inputFile, int pattern_length 
 #elif defined ONLINE_MULTS
   for(int i=0; i < pattern.size(); i++)
     delete ePattern[i];
+
+  delete [] ePattern;
 #else
   for(int i=0; i < 5; i++)
     delete eAlphabet[i];
